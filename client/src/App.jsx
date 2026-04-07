@@ -1,17 +1,45 @@
-import { Button } from "./components/ui/button";
+import { Routes, Route } from "react-router-dom";
 
-function App() {
+import SignInPage from "./pages/SignIn";
+import SignUpPage from "./pages/SignUp";
+
+const Home = () => <div className="p-4">Home Page</div>;
+const Problems = () => <div className="p-4">All Problems Page</div>;
+const SingleProblem = () => <div className="p-4">Single Problem Page</div>;
+const Submissions = () => <div className="p-4">Submissions Page</div>;
+
+export default function App() {
+	const APP_ROUTES = [
+		{
+			path: "",
+			element: <Home />,
+			metaTitle: "Home",
+		},
+		{
+			path: "/problems",
+			element: <Problems />,
+			metaTitle: "All Problems",
+		},
+		{
+			path: "/problem/:id",
+			element: <SingleProblem />,
+			metaTitle: "Single Problem",
+		},
+		{
+			path: "/submissions",
+			element: <Submissions />,
+			metaTitle: "Submissions",
+		},
+	];
+
 	return (
-		<>
-			<h1 className="text-3xl text-center font-bold mt-10">
-				Hello Welcome to algo judge
-			</h1>
-			<div className="flex min-h-svh flex-col items-center justify-center">
-				<Button variant="destructive">Click me</Button>
-				<Button variant="outline">Click me</Button>
-			</div>
-		</>
+		<Routes>
+			{APP_ROUTES.map(({ path, element, metaTitle }) => (
+				<Route key={path} path={path} element={element} />
+			))}
+
+			<Route path="/signin" element={<SignInPage />} />
+			<Route path="/signup" element={<SignUpPage />} />
+		</Routes>
 	);
 }
-
-export default App;
