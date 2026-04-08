@@ -1,4 +1,5 @@
 import express from "express";
+import { signin, signup } from "../controller/authController.js";
 
 const router = express.Router();
 
@@ -10,5 +11,9 @@ router.get("/", (req, res) => {
 		timestamp: new Date().toISOString(),
 	});
 });
+
+// Auth routes
+router.post("/signup", signup);
+router.post("/signin", signin);
 
 export default router;

@@ -1,0 +1,41 @@
+import mongoose from "mongoose";
+
+/**
+ * User Schema Definition
+ * Defines the structure for user documents in MongoDB
+ * Includes validation and constraints for user data
+ */
+const authUserSchema = new mongoose.Schema(
+	{
+		name: {
+			type: String,
+			required: [true, "First name is required"],
+			trim: true,
+			minlength: [2, "First name must be at least 2 characters long"],
+			maxlength: [50, "First name cannot exceed 50 characters"],
+		},
+		email: {
+			type: String,
+			required: [true, "Email is required"],
+			unique: true,
+			lowercase: true,
+			trim: true,
+			match: [
+				/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+				"Please enter a valid email address",
+			],
+		},
+		password: {
+			type: String,
+			required: [true, "Password is required"],
+			minlength: [6, "Password must be at least 6 characters long"],
+		},
+	},
+	{
+		timestamps: true,
+	},
+);
+
+const AuthUser = mongoose.model("AuthUser", authUserSchema);
+
+export default AuthUser;

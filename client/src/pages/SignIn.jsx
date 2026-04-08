@@ -5,6 +5,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSignIn } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 
 const schema = z.object({
 	email: z.string().email(),
@@ -12,6 +14,8 @@ const schema = z.object({
 });
 
 export default function SignInPage() {
+	const toast = useToast();
+	const { mutate: signIn } = useSignIn();
 	const {
 		register,
 		handleSubmit,
@@ -23,6 +27,20 @@ export default function SignInPage() {
 	const onSubmit = (data) => {
 		console.log("Login Data:", data);
 		// call API here
+		signIn(data, {
+			onSuccess: () => {
+				toast.success("Login successful");
+			},
+
+			onError: (error) => {
+				toast.error(
+					"Signin failed",
+					error?.response?.data?.error ||
+						error?.message ||
+						"Something went wrong while signing in.",
+				);
+			},
+		});
 	};
 
 	return (

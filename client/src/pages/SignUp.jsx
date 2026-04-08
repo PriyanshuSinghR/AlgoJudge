@@ -5,6 +5,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSignUp } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 
 const schema = z.object({
 	name: z.string().min(2),
@@ -13,6 +15,8 @@ const schema = z.object({
 });
 
 export default function SignUpPage() {
+	const toast = useToast();
+	const { mutate: signUp } = useSignUp();
 	const {
 		register,
 		handleSubmit,
@@ -24,6 +28,20 @@ export default function SignUpPage() {
 	const onSubmit = (data) => {
 		console.log("Signup Data:", data);
 		// call API here
+		signUp(data, {
+			onSuccess: () => {
+				toast.success("Signup successful");
+			},
+
+			onError: (error) => {
+				toast.error(
+					"Signup failed",
+					error?.response?.data?.error ||
+						error?.message ||
+						"Something went wrong while signing up.",
+				);
+			},
+		});
 	};
 
 	return (
