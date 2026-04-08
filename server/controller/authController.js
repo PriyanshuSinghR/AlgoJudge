@@ -35,6 +35,11 @@ const signup = async (req, res) => {
 			password: hashedPassword,
 		});
 
+		if (!process.env.JWT_SECRET) {
+			console.error("JWT_SECRET is missing in .env");
+			process.exit(1);
+		}
+
 		const token = jwt.sign(
 			{
 				id: user._id,
@@ -116,6 +121,11 @@ const signin = async (req, res) => {
 				success: false,
 				message: "Invalid email or password",
 			});
+		}
+
+		if (!process.env.JWT_SECRET) {
+			console.error("JWT_SECRET environment variable is not defined");
+			process.exit(1);
 		}
 
 		const token = jwt.sign(
