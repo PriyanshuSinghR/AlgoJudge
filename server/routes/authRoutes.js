@@ -21,6 +21,6 @@ router.get("/", (req, res) => {
 router.post("/signup", signup);
 router.post("/signin", signin);
 router.get("/me", getCurrentUser);
-router.post("/logout", signout);
+router.post("/signout", signout);
 
 export default router;

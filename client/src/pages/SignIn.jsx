@@ -25,8 +25,6 @@ export default function SignInPage() {
 	});
 
 	const onSubmit = (data) => {
-		console.log("Login Data:", data);
-		// call API here
 		signIn(data, {
 			onSuccess: () => {
 				toast.success("Login successful");

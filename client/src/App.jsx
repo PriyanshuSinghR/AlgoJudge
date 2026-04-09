@@ -1,45 +1,33 @@
 import { Routes, Route } from "react-router-dom";
-
 import SignInPage from "./pages/SignIn";
 import SignUpPage from "./pages/SignUp";
+import Layout from "./components/common/Layout";
 
 const Home = () => <div className="p-4">Home Page</div>;
 const Problems = () => <div className="p-4">All Problems Page</div>;
 const SingleProblem = () => <div className="p-4">Single Problem Page</div>;
 const Submissions = () => <div className="p-4">Submissions Page</div>;
 
-export default function App() {
-	const APP_ROUTES = [
-		{
-			path: "",
-			element: <Home />,
-			metaTitle: "Home",
-		},
-		{
-			path: "/problems",
-			element: <Problems />,
-			metaTitle: "All Problems",
-		},
-		{
-			path: "/problem/:id",
-			element: <SingleProblem />,
-			metaTitle: "Single Problem",
-		},
-		{
-			path: "/submissions",
-			element: <Submissions />,
-			metaTitle: "Submissions",
-		},
-	];
+// ← OUTSIDE the component, so JSX elements are not recreated on every render
+const APP_ROUTES = [
+	{ path: "", element: <Home />, permission: "public" },
+	{ path: "/problems", element: <Problems />, permission: "public" },
+	{ path: "/problem/:id", element: <SingleProblem />, permission: "protected" },
+	{ path: "/submissions", element: <Submissions />, permission: "protected" },
+	{ path: "/signin", element: <SignInPage />, permission: "guest" },
+	{ path: "/signup", element: <SignUpPage />, permission: "guest" },
+];
 
+export default function App() {
 	return (
 		<Routes>
-			{APP_ROUTES.map(({ path, element, metaTitle }) => (
-				<Route key={path} path={path} element={element} />
+			{APP_ROUTES.map(({ path, element, permission }) => (
+				<Route
+					key={path}
+					path={path}
+					element={<Layout permission={permission}>{element}</Layout>}
+				/>
 			))}
-
-			<Route path="/signin" element={<SignInPage />} />
-			<Route path="/signup" element={<SignUpPage />} />
 		</Routes>
 	);
 }

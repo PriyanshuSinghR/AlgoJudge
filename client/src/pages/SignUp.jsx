@@ -26,8 +26,6 @@ export default function SignUpPage() {
 	});
 
 	const onSubmit = (data) => {
-		console.log("Signup Data:", data);
-		// call API here
 		signUp(data, {
 			onSuccess: () => {
 				toast.success("Signup successful");
