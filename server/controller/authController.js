@@ -35,11 +35,6 @@ const signup = async (req, res) => {
 			password: hashedPassword,
 		});
 
-		if (!process.env.JWT_SECRET) {
-			console.error("JWT_SECRET is missing in .env");
-			process.exit(1);
-		}
-
 		const token = jwt.sign(
 			{
 				id: user._id,
@@ -123,11 +118,6 @@ const signin = async (req, res) => {
 			});
 		}
 
-		if (!process.env.JWT_SECRET) {
-			console.error("JWT_SECRET environment variable is not defined");
-			process.exit(1);
-		}
-
 		const token = jwt.sign(
 			{
 				id: user._id,
@@ -140,10 +130,10 @@ const signin = async (req, res) => {
 		);
 
 		const cookieOptions = {
-			expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
 			sameSite: "strict",
+			maxAge: 24 * 60 * 60 * 1000,
 		};
 
 		const userResponse = {
@@ -167,4 +157,53 @@ const signin = async (req, res) => {
 	}
 };
 
-export { signup, signin };
+const signout = async (req, res) => {
+	try {
+		res.clearCookie("token", {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "strict",
+		});
+
+		res.status(200).json({
+			success: true,
+			message: "Logged out successfully",
+		});
+	} catch (error) {
+		console.error("Logout error:", error);
+
+		res.status(500).json({
+			success: false,
+			message: "Internal server error during logout",
+		});
+	}
+};
+
+const getCurrentUser = async (req, res) => {
+	try {
+		const token = req.cookies.token;
+
+		if (!token) {
+			return res.status(401).json({
+				success: false,
+				message: "Not authenticated",
+			});
+		}
+
+		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+		const user = await AuthUser.findById(decoded.id).select("-password");
+
+		res.status(200).json({
+			success: true,
+			user,
+		});
+	} catch (error) {
+		return res.status(401).json({
+			success: false,
+			message: "Invalid token",
+		});
+	}
+};
+
+export { signup, signin, signout, getCurrentUser };
