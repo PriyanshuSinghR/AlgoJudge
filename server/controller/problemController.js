@@ -2,7 +2,9 @@ import Problem from "../model/problem.js";
 
 export const getProblems = async (req, res) => {
 	try {
-		const problems = await Problem.find().select("title difficulty tags slug");
+		const problems = await Problem.find().select(
+			"title difficulty tags slug createdBy",
+		);
 
 		res.json({
 			success: true,
