@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
+import problemRoutes from "./routes/problemRoutes.js";
 import DBConnection from "./database/db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -26,7 +27,6 @@ app.use(cookieParser());
 DBConnection();
 
 // Routes
-app.use("/auth", authRoutes);
 app.get("/", (req, res) => {
 	res.status(200).json({
 		message: "Server is running!",
@@ -34,6 +34,8 @@ app.get("/", (req, res) => {
 		timestamp: new Date().toISOString(),
 	});
 });
+app.use("/auth", authRoutes);
+app.use("/problems", problemRoutes);
 
 // Start server
 app.listen(PORT, () => {
