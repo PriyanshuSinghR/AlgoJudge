@@ -31,10 +31,8 @@ export const useCurrentUser = () => {
 				const res = await getCurrentUser();
 				return res.data.user ?? null;
 			} catch (error) {
-				if (error?.response?.status === 401) {
-					return null;
-				}
-				throw error;
+				console.error("Error fetching current user:", error);
+				return null;
 			}
 		},
 		retry: false,

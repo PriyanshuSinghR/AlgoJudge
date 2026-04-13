@@ -4,6 +4,8 @@ import SignUpPage from "./pages/SignUp";
 import Layout from "./components/common/Layout";
 import ProblemsPage from "./pages/Problems";
 import CreateProblemPage from "./pages/CreateProblem";
+import { Edit } from "lucide-react";
+import EditProblemPage from "./pages/EditProblem";
 
 const Home = () => <div className="p-4">Home Page</div>;
 const SingleProblem = () => <div className="p-4">Single Problem Page</div>;
@@ -16,6 +18,11 @@ const APP_ROUTES = [
 	{
 		path: "/create-problem",
 		element: <CreateProblemPage />,
+		permission: "protected",
+	},
+	{
+		path: "/edit-problem/:id",
+		element: <EditProblemPage />,
 		permission: "protected",
 	},
 	{ path: "/problem/:id", element: <SingleProblem />, permission: "protected" },

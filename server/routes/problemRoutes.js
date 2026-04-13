@@ -5,6 +5,7 @@ import {
 	getProblemBySlug,
 	updateProblem,
 	deleteProblem,
+	getProblemById,
 } from "../controller/problemController.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
@@ -13,6 +14,7 @@ const router = express.Router();
 // public
 router.get("/", getProblems);
 router.get("/:slug", getProblemBySlug);
+router.get("/id/:id", getProblemById);
 
 // protected
 router.post("/", requireAuth, createProblem);

@@ -13,10 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { useDeleteProblem } from "@/hooks/useProblems";
+import { ActionAlert } from "../common/ActionAlert";
+import { useToast } from "@/hooks/useToast";
+import { Trash2 } from "lucide-react";
 
 export default function ProblemsTable({ problems, user }) {
+	const toast = useToast();
 	const navigate = useNavigate();
-	const { mutate: deleteProblem, isPending } = useDeleteProblem();
+	const { mutate: deleteProblem } = useDeleteProblem();
 
 	const getDifficultyColor = (difficulty) => {
 		switch (difficulty) {
@@ -31,17 +35,21 @@ export default function ProblemsTable({ problems, user }) {
 		}
 	};
 
-	const handleDelete = (e, id) => {
-		e.stopPropagation(); // 🚨 prevent row click
-
-		if (confirm("Are you sure you want to delete this problem?")) {
-			deleteProblem(id);
-		}
-	};
-
 	const handleUpdate = (e, id) => {
 		e.stopPropagation();
 		navigate(`/edit-problem/${id}`);
+	};
+
+	const handleDelete = (id) => {
+		deleteProblem(id, {
+			onSuccess: () => {
+				toast.success("Problem deleted successfully");
+				navigate(`/problems`);
+			},
+			onError: () => {
+				toast.error("Failed to delete problem");
+			},
+		});
 	};
 
 	return (
@@ -73,7 +81,7 @@ export default function ProblemsTable({ problems, user }) {
 									</Badge>
 								</TableCell>
 
-								<TableCell>
+								<TableCell onClick={(e) => e.stopPropagation()}>
 									{isOwner ? (
 										<div className="flex gap-2">
 											<Button
@@ -83,15 +91,17 @@ export default function ProblemsTable({ problems, user }) {
 											>
 												Edit
 											</Button>
-
-											<Button
-												size="sm"
+											<ActionAlert
+												title="Delete Problem?"
+												description="This action cannot be undone."
+												confirmText="Delete"
 												variant="destructive"
-												disabled={isPending}
-												onClick={(e) => handleDelete(e, problem._id)}
+												onConfirm={() => handleDelete(problem._id)}
 											>
-												Delete
-											</Button>
+												<div className="inline-flex items-center justify-center rounded-md border border-red-200 p-2 text-red-500 hover:bg-red-500 hover:text-white cursor-pointer">
+													<Trash2 size={13} />
+												</div>
+											</ActionAlert>
 										</div>
 									) : (
 										<span className="text-muted-foreground text-sm">—</span>

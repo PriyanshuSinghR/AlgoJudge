@@ -6,6 +6,7 @@ import {
 	createProblem,
 	updateProblem,
 	deleteProblem,
+	getProblemById,
 } from "@/api/problemApi";
 
 export const useProblems = () => {
@@ -18,7 +19,7 @@ export const useProblems = () => {
 	});
 };
 
-export const useProblem = (slug) => {
+export const useProblemBySlug = (slug) => {
 	return useQuery({
 		queryKey: ["problem", slug],
 		queryFn: async () => {
@@ -26,6 +27,17 @@ export const useProblem = (slug) => {
 			return res.data.data;
 		},
 		enabled: !!slug, // important
+	});
+};
+
+export const useProblemById = (id) => {
+	return useQuery({
+		queryKey: ["problem", id],
+		queryFn: async () => {
+			const res = await getProblemById(id);
+			return res.data.data;
+		},
+		enabled: !!id, // important
 	});
 };
 
