@@ -109,4 +109,23 @@ const executeJava = (codeFilePath, inputFilePath) => {
 	});
 };
 
-export { executeCpp, executePython, executeJs, executeJava };
+const executeByLanguage = async (language, codeFilePath, inputFilePath) => {
+	switch (language) {
+		case "cpp":
+			return await executeCpp(codeFilePath, inputFilePath);
+
+		case "python":
+			return await executePython(codeFilePath, inputFilePath);
+
+		case "javascript":
+			return await executeJs(codeFilePath, inputFilePath);
+
+		case "java":
+			return await executeJava(codeFilePath, inputFilePath);
+
+		default:
+			throw new Error("Unsupported language");
+	}
+};
+
+export { executeCpp, executePython, executeJs, executeJava, executeByLanguage };

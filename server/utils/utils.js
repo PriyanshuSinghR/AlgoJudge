@@ -7,8 +7,8 @@ import { v4 as uuid } from "uuid";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const dirCodes = path.join(__dirname, "codes");
-const dirInputs = path.join(__dirname, "inputs");
+const dirCodes = path.join(__dirname, "../codes");
+const dirInputs = path.join(__dirname, "../inputs");
 
 if (!fs.existsSync(dirCodes)) {
 	fs.mkdirSync(dirCodes, { recursive: true });
@@ -25,7 +25,7 @@ const languageExtension = {
 	java: "java",
 };
 
-const generateFile = (language, code, input) => {
+export const generateFile = (language, code, input) => {
 	const jobId = uuid();
 
 	const codeFileName = `${jobId}.${languageExtension[language]}`;
@@ -44,4 +44,10 @@ const generateFile = (language, code, input) => {
 	};
 };
 
-export default generateFile;
+export const cleanupFiles = (...filePaths) => {
+	for (const filePath of filePaths) {
+		if (filePath && fs.existsSync(filePath)) {
+			fs.unlinkSync(filePath);
+		}
+	}
+};
