@@ -52,9 +52,18 @@ export default function SingleProblemPage() {
 			localStorage.setItem(`code-${slug}`, JSON.stringify(codeMap));
 			setSaveLabel("Saved just now");
 			setTimeout(() => setSaveLabel("Auto-saved"), 2000);
-		}, 1000);
+		}, 800);
 		return () => clearTimeout(timer);
 	}, [codeMap, slug]);
+
+	useEffect(() => {
+		const savedLang = localStorage.getItem("selected-lang");
+		if (savedLang) setLanguage(savedLang);
+	}, []);
+
+	useEffect(() => {
+		localStorage.setItem("selected-lang", language);
+	}, [language]);
 
 	const handleCodeChange = (value) => {
 		setCodeMap((prev) => ({ ...prev, [language]: value ?? "" }));
@@ -62,10 +71,15 @@ export default function SingleProblemPage() {
 
 	const handleRun = () => {
 		setRunStatus("Running...");
-		setOutput("Running test cases...");
+		setOutput("");
 		setOutputColor("text-muted-foreground");
+
 		setTimeout(() => {
-			setOutput("[0, 1]");
+			setOutput(`[Input]
+${input || "[2,7,11,15]\n9"}
+
+[Output]
+[0,1]`);
 			setOutputColor("text-green-600");
 			setRunStatus("Passed in 2ms");
 		}, 600);
@@ -82,6 +96,15 @@ export default function SingleProblemPage() {
 			setOutputColor("text-green-600");
 			setRunStatus("Accepted");
 		}, 1200);
+	};
+
+	const handleLanguageChange = (lang) => {
+		setLanguage(lang);
+
+		setCodeMap((prev) => ({
+			...prev,
+			[lang]: prev[lang] || DEFAULT_CODE[lang],
+		}));
 	};
 
 	if (isLoading) {
@@ -108,7 +131,7 @@ export default function SingleProblemPage() {
 		: [];
 
 	return (
-		<div className="h-[calc(100vh-44px)] flex flex-col">
+		<div className="h-[100vh] flex flex-col">
 			<div className="h-11 flex items-center gap-3 px-4 border-b bg-background flex-shrink-0">
 				<button
 					onClick={() => navigate("/problems")}
@@ -262,7 +285,7 @@ export default function SingleProblemPage() {
 				{/* RIGHT — editor */}
 				<div className="flex-1 flex flex-col">
 					<div className="h-10 flex items-center gap-2 px-3 border-b bg-background flex-shrink-0">
-						<Select value={language} onValueChange={setLanguage}>
+						<Select value={language} onValueChange={handleLanguageChange}>
 							<SelectTrigger className="h-7 w-32 text-xs font-mono border-border">
 								<SelectValue />
 							</SelectTrigger>
@@ -278,6 +301,19 @@ export default function SingleProblemPage() {
 							<span className="text-[11px] text-muted-foreground">
 								{saveLabel}
 							</span>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-7 text-xs px-2"
+								onClick={() =>
+									setCodeMap((prev) => ({
+										...prev,
+										[language]: DEFAULT_CODE[language],
+									}))
+								}
+							>
+								Reset
+							</Button>
 							<Button
 								variant="outline"
 								size="sm"

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import problemRoutes from "./routes/problemRoutes.js";
+import compilerRoutes from "./routes/compilerRoutes.js";
 import DBConnection from "./database/db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -36,6 +37,7 @@ app.get("/", (req, res) => {
 });
 app.use("/auth", authRoutes);
 app.use("/problems", problemRoutes);
+app.use("/compiler", compilerRoutes);
 
 // Start server
 app.listen(PORT, () => {
