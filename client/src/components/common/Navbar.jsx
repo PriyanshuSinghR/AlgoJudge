@@ -1,13 +1,13 @@
 import { UserNav } from "./UserNav";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useAuth";
 
 export function Navbar() {
 	const { data: user, isLoading } = useCurrentUser();
-	if (!isLoading) {
-		console.log(user);
-	}
+	const location = useLocation();
+
+	const redirectUrl = encodeURIComponent(location.pathname);
 
 	return (
 		<header className="sticky top-0 z-10 w-full bg-background/95 shadow backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -21,17 +21,16 @@ export function Navbar() {
 
 					{!isLoading && !user && (
 						<div className="flex gap-2">
-							<Link to="/signin">
+							<Link to={`/signin?redirect=${redirectUrl}`}>
 								<Button variant="outline">Sign In</Button>
 							</Link>
 
-							<Link to="/signup">
+							<Link to={`/signup?redirect=${redirectUrl}`}>
 								<Button>Sign Up</Button>
 							</Link>
 						</div>
 					)}
 
-					{/* Logged in state */}
 					{!isLoading && user && <UserNav user={user} />}
 				</div>
 			</div>

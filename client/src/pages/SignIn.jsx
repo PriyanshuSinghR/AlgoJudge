@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,13 @@ const schema = z.object({
 
 export default function SignInPage() {
 	const toast = useToast();
+	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+
+	const redirectPath = searchParams.get("redirect") || "/";
+
 	const { mutate: signIn } = useSignIn();
+
 	const {
 		register,
 		handleSubmit,
@@ -28,6 +35,7 @@ export default function SignInPage() {
 		signIn(data, {
 			onSuccess: () => {
 				toast.success("Login successful");
+				navigate(redirectPath);
 			},
 
 			onError: (error) => {

@@ -8,7 +8,7 @@ export const run = async (req, res) => {
 	if (!code) {
 		return res.status(400).json({
 			success: false,
-			error: "Code is required",
+			message: "Code is required",
 		});
 	}
 
@@ -25,12 +25,12 @@ export const run = async (req, res) => {
 
 		return res.status(200).json({
 			success: true,
-			output: output.trim(),
+			data: output.trim(),
 		});
 	} catch (error) {
 		return res.status(500).json({
 			success: false,
-			error: error.toString(),
+			message: error.toString(),
 		});
 	} finally {
 		if (files) {
@@ -46,7 +46,7 @@ export const submit = async (req, res) => {
 		if (!problemId || !code) {
 			return res.status(400).json({
 				success: false,
-				error: "problemId and code are required",
+				message: "problemId and code are required",
 			});
 		}
 
@@ -55,7 +55,7 @@ export const submit = async (req, res) => {
 		if (!problem) {
 			return res.status(404).json({
 				success: false,
-				error: "Problem not found",
+				message: "Problem not found",
 			});
 		}
 
@@ -64,7 +64,7 @@ export const submit = async (req, res) => {
 		if (testCases.length === 0) {
 			return res.status(400).json({
 				success: false,
-				error: "No test cases found for this problem",
+				message: "No test cases found for this problem",
 			});
 		}
 
@@ -100,7 +100,7 @@ export const submit = async (req, res) => {
 					success: true,
 					status: "Runtime Error",
 					failedTestCase: i + 1,
-					error: runtimeError.toString(),
+					message: runtimeError.toString(),
 				});
 			} finally {
 				if (files) {
@@ -118,7 +118,7 @@ export const submit = async (req, res) => {
 	} catch (error) {
 		return res.status(500).json({
 			success: false,
-			error: error.toString(),
+			message: error.toString(),
 		});
 	}
 };

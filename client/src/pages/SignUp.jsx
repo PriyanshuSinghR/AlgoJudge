@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,13 @@ const schema = z.object({
 
 export default function SignUpPage() {
 	const toast = useToast();
+	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+
+	const redirectPath = searchParams.get("redirect") || "/";
+
 	const { mutate: signUp } = useSignUp();
+
 	const {
 		register,
 		handleSubmit,
@@ -29,6 +36,7 @@ export default function SignUpPage() {
 		signUp(data, {
 			onSuccess: () => {
 				toast.success("Signup successful");
+				navigate(redirectPath);
 			},
 
 			onError: (error) => {
@@ -84,9 +92,12 @@ export default function SignUpPage() {
 
 						<p className="text-sm text-center">
 							Already have an account?{" "}
-							<a href="/signin" className="underline">
+							<Link
+								to={`/signin?redirect=${encodeURIComponent(redirectPath)}`}
+								className="underline"
+							>
 								Sign in
-							</a>
+							</Link>
 						</p>
 					</form>
 				</CardContent>

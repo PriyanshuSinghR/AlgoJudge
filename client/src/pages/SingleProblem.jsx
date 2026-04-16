@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useProblemBySlug } from "@/hooks/useProblems";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,8 @@ import {
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_CODE } from "@/lib/constant";
+import { useRunProblem, useSubmitProblem } from "@/hooks/useConsole";
+import { useCurrentUser } from "@/hooks/useAuth";
 
 const MONACO_LANG = {
 	javascript: "javascript",
@@ -32,6 +34,10 @@ const DIFFICULTY_STYLES = {
 export default function SingleProblemPage() {
 	const { slug } = useParams();
 	const navigate = useNavigate();
+	const location = useLocation();
+	const { mutate: runCode, isPending: isRunning } = useRunProblem();
+	const { mutate: submitCode, isPending: isSubmitting } = useSubmitProblem();
+	const { data: user } = useCurrentUser();
 	const { data: problem, isLoading } = useProblemBySlug(slug);
 
 	const [language, setLanguage] = useState("javascript");
@@ -74,28 +80,114 @@ export default function SingleProblemPage() {
 		setOutput("");
 		setOutputColor("text-muted-foreground");
 
-		setTimeout(() => {
-			setOutput(`[Input]
-${input || "[2,7,11,15]\n9"}
+		runCode(
+			{
+				language,
+				code: codeMap[language],
+				input,
+			},
+			{
+				onSuccess: (response) => {
+					const result = response?.data;
 
-[Output]
-[0,1]`);
-			setOutputColor("text-green-600");
-			setRunStatus("Passed in 2ms");
-		}, 600);
+					if (result?.success) {
+						setOutput(result.data || "No output");
+						setOutputColor("text-green-600");
+						setRunStatus("Run Successful");
+					} else {
+						setOutput(result?.error || "Something went wrong");
+						setOutputColor("text-red-600");
+						setRunStatus("Run Failed");
+					}
+				},
+				onError: (error) => {
+					setOutput(
+						error?.response?.data?.message ||
+							error?.message ||
+							"Something went wrong while running code",
+					);
+					setOutputColor("text-red-600");
+					setRunStatus("Runtime Error");
+				},
+			},
+		);
 	};
 
 	const handleSubmit = () => {
 		setRunStatus("Judging...");
-		setOutput("Running test cases...");
+		setOutput("Running hidden test cases...");
 		setOutputColor("text-muted-foreground");
-		setTimeout(() => {
-			setOutput(
-				"✓ 57/57 test cases passed\nRuntime: 72ms — beats 94.3%\nMemory: 42.8MB — beats 71.2%",
-			);
-			setOutputColor("text-green-600");
-			setRunStatus("Accepted");
-		}, 1200);
+
+		submitCode(
+			{
+				problemId: problem._id,
+				language,
+				code: codeMap[language],
+			},
+			{
+				onSuccess: (response) => {
+					const result = response?.data;
+
+					if (!result?.success) {
+						setOutput(result?.message || "Submission failed");
+						setOutputColor("text-red-600");
+						setRunStatus("Submission Failed");
+						return;
+					}
+
+					if (result.status === "Accepted") {
+						setOutput(
+							`✓ All ${result.totalTestCases} test cases passed\n\n${result.message}`,
+						);
+						setOutputColor("text-green-600");
+						setRunStatus("Accepted");
+						return;
+					}
+
+					if (result.status === "Wrong Answer") {
+						setOutput(
+							`✗ Wrong Answer on test case #${result.failedTestCase}
+
+Input:
+${result.input}
+
+Expected Output:
+${result.expectedOutput}
+
+Your Output:
+${result.actualOutput}`,
+						);
+						setOutputColor("text-red-600");
+						setRunStatus("Wrong Answer");
+						return;
+					}
+
+					if (result.status === "Runtime Error") {
+						setOutput(
+							`⚠ Runtime Error on test case #${result.failedTestCase}
+
+${result.error}`,
+						);
+						setOutputColor("text-red-600");
+						setRunStatus("Runtime Error");
+						return;
+					}
+
+					setOutput("Unknown submission result");
+					setOutputColor("text-red-600");
+					setRunStatus("Error");
+				},
+				onError: (error) => {
+					setOutput(
+						error?.response?.data?.message ||
+							error?.message ||
+							"Something went wrong while submitting code",
+					);
+					setOutputColor("text-red-600");
+					setRunStatus("Submission Failed");
+				},
+			},
+		);
 	};
 
 	const handleLanguageChange = (lang) => {
@@ -319,16 +411,32 @@ ${input || "[2,7,11,15]\n9"}
 								size="sm"
 								className="h-7 text-xs px-3"
 								onClick={handleRun}
+								disabled={isRunning}
 							>
-								Run
+								{isRunning ? "Running..." : "Run"}
 							</Button>
-							<Button
-								size="sm"
-								className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white border-0"
-								onClick={handleSubmit}
-							>
-								Submit
-							</Button>
+							{user ? (
+								<Button
+									size="sm"
+									className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white border-0"
+									onClick={handleSubmit}
+									disabled={isSubmitting}
+								>
+									{isSubmitting ? "Submitting..." : "Submit"}
+								</Button>
+							) : (
+								<Button
+									size="sm"
+									className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white border-0"
+									onClick={() =>
+										navigate(
+											`/signin?redirect=${encodeURIComponent(location.pathname)}`,
+										)
+									}
+								>
+									Signin to Submit
+								</Button>
+							)}
 						</div>
 					</div>
 
