@@ -85,16 +85,27 @@ export function Navbar() {
 								<Link to={`/signin?redirect=${redirectUrl}`}>
 									<Button
 										variant="ghost"
-										className="rounded-2xl border border-transparent px-5 text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-900 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-white"
+										className={cn(
+											"rounded-xl border px-5 text-sm font-semibold transition-all duration-300",
+											location.pathname === "/signin"
+												? "border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 hover:border-emerald-600 hover:text-white"
+												: "border-emerald-500/40 text-emerald-600 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white dark:border-emerald-500/30 dark:text-emerald-400",
+										)}
 									>
 										Sign In
 									</Button>
 								</Link>
 
 								<Link to={`/signup?redirect=${redirectUrl}`}>
-									<Button className="group rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 text-white shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/30">
-										<span>Get Started</span>
-										<ChevronRight className="ml-1 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+									<Button
+										className={cn(
+											"rounded-xl border px-5 text-sm font-semibold transition-all duration-300",
+											location.pathname === "/signup"
+												? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-500/20 hover:border-indigo-700 hover:bg-indigo-700"
+												: "border-indigo-500/40 bg-transparent text-indigo-600 shadow-none hover:border-indigo-600 hover:bg-indigo-600 hover:text-white dark:border-indigo-500/30 dark:bg-transparent dark:text-indigo-400",
+										)}
+									>
+										Sign Up
 									</Button>
 								</Link>
 							</div>

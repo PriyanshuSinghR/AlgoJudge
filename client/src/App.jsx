@@ -7,12 +7,10 @@ import CreateProblemPage from "./pages/CreateProblem";
 import EditProblemPage from "./pages/EditProblem";
 import SingleProblemPage from "./pages/SingleProblem";
 import CompilerPage from "./pages/Compiler";
+import HomePage from "./pages/Home";
 
-const Home = () => <div className="p-4">Home Page</div>;
-
-// ← OUTSIDE the component, so JSX elements are not recreated on every render
 const APP_ROUTES = [
-	{ path: "", element: <Home />, permission: "public" },
+	{ path: "", element: <HomePage />, permission: "public" },
 	{ path: "/problems", element: <ProblemsPage />, permission: "public" },
 	{
 		path: "/create-problem",

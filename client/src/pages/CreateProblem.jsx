@@ -42,23 +42,6 @@ export default function CreateProblemPage() {
 							cases.
 						</p>
 					</div>
-
-					<div className="rounded-2xl border border-white/70 bg-white/80 px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-						<div className="flex items-center gap-3">
-							<div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-								<FileCode2 className="h-5 w-5" />
-							</div>
-
-							<div>
-								<p className="text-2xl font-bold text-slate-900 dark:text-white">
-									New
-								</p>
-								<p className="text-xs text-slate-500 dark:text-zinc-400">
-									Problem Draft
-								</p>
-							</div>
-						</div>
-					</div>
 				</div>
 			</div>
 
