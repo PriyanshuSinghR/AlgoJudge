@@ -14,6 +14,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { CODE_EXAMPLES, LANGUAGES } from "@/lib/constant";
+import { Editor } from "@monaco-editor/react";
+
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 const features = [
 	{
@@ -47,6 +58,8 @@ const highlights = [
 ];
 
 export default function HomePage() {
+	const [selectedLanguage, setSelectedLanguage] = useState("javascript");
+
 	return (
 		<div className="space-y-8 pb-10">
 			<section className="relative overflow-hidden rounded-[40px] border border-slate-200/70 bg-white/80 px-6 py-8 shadow-[0_20px_80px_-20px_rgba(99,102,241,0.18)] backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 sm:px-10 sm:py-12">
@@ -122,30 +135,79 @@ export default function HomePage() {
 										<div className="h-3 w-3 rounded-full bg-yellow-500" />
 										<div className="h-3 w-3 rounded-full bg-green-500" />
 									</div>
+
+									<div className="flex items-center gap-3">
+										<div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
+											Two Sum
+										</div>
+
+										<Select
+											value={selectedLanguage}
+											onValueChange={(lang) => setSelectedLanguage(lang)}
+										>
+											<SelectTrigger className="!w-[120px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white outline-none transition-all hover:border-indigo-500/50 focus:border-indigo-500">
+												<SelectValue>{LANGUAGES[selectedLanguage]}</SelectValue>
+											</SelectTrigger>
+
+											<SelectContent
+												sideOffset={6}
+												align="center"
+												className="w-[140px] rounded-2xl border border-white/10 bg-[#0f172a]/95 p-1.5 text-white shadow-2xl backdrop-blur-xl"
+											>
+												{Object.entries(LANGUAGES).map(([value, label]) => (
+													<SelectItem
+														key={value}
+														value={value}
+														className="rounded-xl px-3 py-2"
+													>
+														{label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
 								</div>
 
-								<div className="space-y-4 p-6 font-mono text-sm">
-									<div className="text-indigo-400">// Two Sum</div>
-									<div className="text-white/80">
-										function twoSum(nums, target) {"{"}
-									</div>
-									<div className="pl-5 text-white/60">
-										const map = new Map();
-									</div>
-									<div className="pl-5 text-white/60">
-										for (let i = 0; i {"<"} nums.length; i++) {"{"}
-									</div>
-									<div className="pl-10 text-white/60">
-										const diff = target - nums[i];
-									</div>
-									<div className="pl-10 text-emerald-400">
-										if (map.has(diff)) return [map.get(diff), i];
-									</div>
-									<div className="pl-10 text-white/60">
-										map.set(nums[i], i);
-									</div>
-									<div className="pl-5 text-white/60">{"}"}</div>
-									<div className="text-white/80">{"}"}</div>
+								<div className="overflow-hidden">
+									<Editor
+										height="420px"
+										theme="custom-dark" // ← custom theme
+										beforeMount={(monaco) => {
+											monaco.editor.defineTheme("custom-dark", {
+												base: "vs-dark",
+												inherit: true,
+												rules: [],
+												colors: {
+													"editor.background": "#020617", // slate-950
+													"editor.lineHighlightBackground": "#00000000",
+													"editorGutter.background": "#020617",
+													"minimap.background": "#020617",
+													"scrollbar.shadow": "#00000000",
+													"editorOverviewRuler.background": "#020617",
+												},
+											});
+										}} // ← register it before render
+										language={selectedLanguage}
+										value={CODE_EXAMPLES[selectedLanguage]}
+										options={{
+											readOnly: true,
+											minimap: { enabled: false },
+											scrollBeyondLastLine: false,
+											fontSize: 14,
+											fontFamily: "'JetBrains Mono', monospace",
+											lineNumbers: "on",
+											padding: { top: 20, bottom: 20 },
+											wordWrap: "on",
+											contextmenu: false,
+											renderLineHighlight: "none",
+											hideCursorInOverviewRuler: true,
+											overviewRulerBorder: false,
+											scrollbar: {
+												verticalScrollbarSize: 6,
+												horizontalScrollbarSize: 6,
+											},
+										}}
+									/>
 								</div>
 							</CardContent>
 						</Card>
