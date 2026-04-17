@@ -4,12 +4,11 @@ import SignUpPage from "./pages/SignUp";
 import Layout from "./components/common/Layout";
 import ProblemsPage from "./pages/Problems";
 import CreateProblemPage from "./pages/CreateProblem";
-import { Edit } from "lucide-react";
 import EditProblemPage from "./pages/EditProblem";
 import SingleProblemPage from "./pages/SingleProblem";
+import CompilerPage from "./pages/Compiler";
 
 const Home = () => <div className="p-4">Home Page</div>;
-const Submissions = () => <div className="p-4">Submissions Page</div>;
 
 // ← OUTSIDE the component, so JSX elements are not recreated on every render
 const APP_ROUTES = [
@@ -30,7 +29,11 @@ const APP_ROUTES = [
 		element: <SingleProblemPage />,
 		permission: "public",
 	},
-	{ path: "/submissions", element: <Submissions />, permission: "protected" },
+	{
+		path: "/compiler",
+		element: <CompilerPage />,
+		permission: "public",
+	},
 	{ path: "/signin", element: <SignInPage />, permission: "guest" },
 	{ path: "/signup", element: <SignUpPage />, permission: "guest" },
 ];

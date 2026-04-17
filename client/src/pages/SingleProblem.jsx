@@ -1,6 +1,6 @@
 import { useLocation, useParams } from "react-router-dom";
 import { useProblemBySlug } from "@/hooks/useProblems";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_CODE } from "@/lib/constant";
 import { useRunProblem, useSubmitProblem } from "@/hooks/useConsole";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { Textarea } from "@/components/ui/textarea";
 
 const MONACO_LANG = {
 	javascript: "javascript",
@@ -39,7 +40,7 @@ export default function SingleProblemPage() {
 	const { mutate: submitCode, isPending: isSubmitting } = useSubmitProblem();
 	const { data: user } = useCurrentUser();
 	const { data: problem, isLoading } = useProblemBySlug(slug);
-
+	const editorRef = useRef(null);
 	const [language, setLanguage] = useState("javascript");
 	const [codeMap, setCodeMap] = useState(DEFAULT_CODE);
 	const [input, setInput] = useState("");
@@ -199,6 +200,32 @@ ${result.error}`,
 		}));
 	};
 
+	const handleEditorWheel = (e) => {
+		const editor = editorRef.current;
+		if (!editor) return;
+
+		const scrollTop = editor.getScrollTop();
+		const scrollHeight = editor.getScrollHeight();
+		const editorHeight = editor.getLayoutInfo().height;
+
+		const maxScrollTop = scrollHeight - editorHeight;
+		const deltaY = e.deltaY;
+
+		const isScrollingDown = deltaY > 0;
+		const isScrollingUp = deltaY < 0;
+
+		const atTop = scrollTop <= 0;
+		const atBottom = scrollTop >= maxScrollTop - 2;
+
+		const canEditorScrollDown = isScrollingDown && !atBottom;
+		const canEditorScrollUp = isScrollingUp && !atTop;
+
+		if (canEditorScrollDown || canEditorScrollUp) {
+			e.stopPropagation();
+			return;
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<div className="h-[calc(100vh-44px)] flex items-center justify-center">
@@ -223,290 +250,337 @@ ${result.error}`,
 		: [];
 
 	return (
-		<div className="h-[100vh] flex flex-col">
-			<div className="h-11 flex items-center gap-3 px-4 border-b bg-background flex-shrink-0">
-				<button
-					onClick={() => navigate("/problems")}
-					className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted px-2 py-1 rounded-md transition-colors"
-				>
-					<ChevronLeft className="w-3.5 h-3.5" />
-					Problems
-				</button>
-				<div className="w-px h-4 bg-border" />
-				<span className="text-xs text-muted-foreground">
-					#{problem.id ?? "42"}
-				</span>
-				<span className="text-sm font-medium">{problem.title}</span>
-				<Badge
-					className={cn(
-						"text-xs border rounded-full px-2 py-0.5",
-						DIFFICULTY_STYLES[problem.difficulty],
-					)}
-				>
-					{problem.difficulty}
-				</Badge>
-
-				{/* <div className="ml-auto flex items-center gap-3">
-					{problem.solved && (
-						<>
-							<div className="flex items-center gap-1.5 text-green-600">
-								<CheckCircle2 className="w-3.5 h-3.5" />
-								<span className="text-xs">Solved</span>
-							</div>
-							<div className="w-px h-4 bg-border" />
-						</>
-					)}
-					<div className="flex flex-col gap-0.5">
-						<span className="text-[11px] text-muted-foreground">
-							73.2% acceptance
-						</span>
-						<div className="h-1 w-20 bg-muted rounded-full overflow-hidden">
-							<div
-								className="h-full bg-green-500 rounded-full"
-								style={{ width: "73.2%" }}
-							/>
-						</div>
-					</div>
-				</div> */}
-			</div>
-
-			<div className="flex flex-1 overflow-hidden">
-				<div className="w-[44%] border-r flex flex-col bg-background">
-					<div className="px-4 py-3 border-b flex-shrink-0">
-						<div className="flex gap-1.5 flex-wrap">
-							{problem.tags?.map((tag) => (
-								<span
-									key={tag}
-									className="text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border"
+		<div className="h-[calc(100vh-150px)] overflow-hidden px-2 py-1">
+			<div className="grid h-full gap-5 xl:grid-cols-[430px_minmax(0,1fr)]">
+				<div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[36px] border border-white/60 bg-gradient-to-br from-white/90 via-white/75 to-white/50  backdrop-blur-2xl dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-zinc-950/20">
+					<div className="shrink-0 border-b border-slate-100 p-6 dark:border-zinc-800">
+						<div className="relative border-b border-slate-100 p-6 dark:border-zinc-800">
+							<div className="relative">
+								<button
+									onClick={() => navigate("/problems")}
+									className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
 								>
-									{tag}
-								</span>
-							))}
-						</div>
-						{/* <div className="mt-3 grid grid-cols-3 divide-x border rounded-lg overflow-hidden">
-							{[
-								{ val: "12.4M", label: "Submissions", color: "text-green-700" },
-								{ val: "73.2%", label: "Acceptance", color: "text-green-700" },
-								{ val: "O(n)", label: "Optimal", color: "" },
-							].map(({ val, label, color }) => (
-								<div key={label} className="px-3 py-2 flex flex-col gap-0.5">
-									<span className={cn("text-sm font-medium", color)}>
-										{val}
-									</span>
-									<span className="text-[11px] text-muted-foreground">
-										{label}
-									</span>
+									<ChevronLeft className="h-4 w-4" />
+									Back to Problems
+								</button>
+
+								<div className="mb-4 flex items-center gap-3">
+									<div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white ">
+										<span className="text-lg font-bold">
+											{problem.title?.charAt(0)}
+										</span>
+									</div>
+
+									<div>
+										<p className="text-xs font-medium uppercase tracking-[0.25em] text-slate-400 dark:text-zinc-500">
+											Problem #{problem.id ?? "42"}
+										</p>
+
+										<h1 className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+											{problem.title}
+										</h1>
+									</div>
 								</div>
-							))}
-						</div> */}
+
+								<div className="flex flex-wrap items-center gap-2">
+									<Badge
+										className={cn(
+											"rounded-full border px-3 py-1 text-xs font-semibold capitalize",
+											DIFFICULTY_STYLES[problem.difficulty],
+										)}
+									>
+										{problem.difficulty}
+									</Badge>
+
+									{problem.tags?.map((tag) => (
+										<div
+											key={tag}
+											className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+										>
+											{tag}
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
 					</div>
 
-					<div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-border">
-						<div>
-							<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2.5">
-								Description
-							</p>
-							<p className="text-[13.5px] leading-relaxed text-muted-foreground">
-								{problem.description}
-							</p>
-						</div>
-
-						{problem.examples?.length > 0 && (
-							<div>
-								<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2.5">
-									Examples
+					<div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-zinc-700">
+						<div className="space-y-6">
+							<div className="rounded-[24px] border border-slate-200 bg-white/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
+								<p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
+									Description
 								</p>
-								<div className="space-y-2.5">
+
+								<p className="text-sm leading-7 text-slate-600 dark:text-zinc-300">
+									{problem.description}
+								</p>
+							</div>
+
+							{problem.examples?.length > 0 && (
+								<div className="space-y-4">
+									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
+										Examples
+									</p>
+
 									{problem.examples.map((ex, i) => (
-										<div key={i} className="border rounded-xl overflow-hidden">
-											<div className="px-3.5 py-2 bg-muted text-[11px] font-medium text-muted-foreground border-b">
-												Example {i + 1}
+										<div
+											key={i}
+											className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/80 dark:border-zinc-800 dark:bg-zinc-950/40"
+										>
+											<div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+												<p className="text-sm font-semibold text-slate-900 dark:text-white">
+													Example {i + 1}
+												</p>
+
+												<div className="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+													Sample
+												</div>
 											</div>
-											<div className="grid grid-cols-2 divide-x">
-												<div className="p-3.5">
-													<p className="text-[11px] text-muted-foreground mb-1.5 font-medium">
+
+											<div className="space-y-4 p-5">
+												<div>
+													<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
 														Input
 													</p>
-													<pre className="font-mono text-[12.5px] text-foreground leading-relaxed">
+
+													<pre className="overflow-x-auto rounded-2xl bg-slate-100 p-4 font-mono text-xs text-slate-700 dark:bg-zinc-900 dark:text-zinc-300">
 														{ex.input}
 													</pre>
 												</div>
-												<div className="p-3.5">
-													<p className="text-[11px] text-muted-foreground mb-1.5 font-medium">
+
+												<div>
+													<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
 														Output
 													</p>
-													<pre className="font-mono text-[12.5px] text-foreground leading-relaxed">
+
+													<pre className="overflow-x-auto rounded-2xl bg-slate-100 p-4 font-mono text-xs text-slate-700 dark:bg-zinc-900 dark:text-zinc-300">
 														{ex.output}
 													</pre>
-													{ex.explanation && (
-														<p className="text-[11px] text-muted-foreground mt-2 italic leading-relaxed">
-															{ex.explanation}
-														</p>
-													)}
 												</div>
+
+												{ex.explanation && (
+													<div>
+														<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
+															Explanation
+														</p>
+
+														<div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm leading-6 text-slate-600 dark:border-indigo-500/20 dark:bg-indigo-500/5 dark:text-zinc-300">
+															{ex.explanation}
+														</div>
+													</div>
+												)}
 											</div>
 										</div>
 									))}
 								</div>
-							</div>
-						)}
+							)}
 
-						{constraints.length > 0 && (
-							<div>
-								<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2.5">
-									Constraints
-								</p>
-								<div className="border rounded-lg divide-y">
-									{constraints.map((c, i) => (
-										<div
-											key={i}
-											className="flex items-center gap-2.5 px-3.5 py-2"
-										>
-											<div className="w-1 h-1 rounded-full bg-border flex-shrink-0" />
-											<code className="font-mono text-[12.5px] text-muted-foreground">
-												{c}
-											</code>
-										</div>
-									))}
+							{constraints.length > 0 && (
+								<div className="rounded-[24px] border border-slate-200 bg-white/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
+									<p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
+										Constraints
+									</p>
+
+									<div className="space-y-2">
+										{constraints.map((constraint, index) => (
+											<div
+												key={index}
+												className="flex items-start gap-3 rounded-2xl bg-slate-100 px-4 py-3 dark:bg-zinc-900"
+											>
+												<div className="mt-1.5 h-2 w-2 rounded-full bg-indigo-500" />
+												<code className="font-mono text-xs text-slate-700 dark:text-zinc-300">
+													{constraint}
+												</code>
+											</div>
+										))}
+									</div>
 								</div>
-							</div>
-						)}
+							)}
+						</div>
 					</div>
 				</div>
 
-				{/* RIGHT — editor */}
-				<div className="flex-1 flex flex-col">
-					<div className="h-10 flex items-center gap-2 px-3 border-b bg-background flex-shrink-0">
-						<Select value={language} onValueChange={handleLanguageChange}>
-							<SelectTrigger className="h-7 w-32 text-xs font-mono border-border">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="javascript">JavaScript</SelectItem>
-								<SelectItem value="python">Python</SelectItem>
-								<SelectItem value="java">Java</SelectItem>
-								<SelectItem value="cpp">C++</SelectItem>
-							</SelectContent>
-						</Select>
+				<div className="flex h-full min-h-0 flex-col overflow-hidden">
+					<div className="min-h-0 flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-zinc-700">
+						<div className="flex min-h-full flex-col gap-5">
+							<div className="relative overflow-hidden rounded-[36px] border border-white/60 bg-gradient-to-br from-white/90 via-white/75 to-white/50 backdrop-blur-2xl dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-zinc-950/20">
+								<div className="relative flex flex-wrap items-center gap-3 border-b border-slate-100 p-5 dark:border-zinc-800">
+									<Select value={language} onValueChange={handleLanguageChange}>
+										<SelectTrigger className="!h-12 w-[190px] rounded-2xl border border-slate-200 bg-white px-5 text-sm font-medium shadow-none dark:border-zinc-700 dark:bg-zinc-900">
+											<SelectValue />
+										</SelectTrigger>
 
-						<div className="ml-auto flex items-center gap-2">
-							<span className="text-[11px] text-muted-foreground">
-								{saveLabel}
-							</span>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 text-xs px-2"
-								onClick={() =>
-									setCodeMap((prev) => ({
-										...prev,
-										[language]: DEFAULT_CODE[language],
-									}))
-								}
-							>
-								Reset
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								className="h-7 text-xs px-3"
-								onClick={handleRun}
-								disabled={isRunning}
-							>
-								{isRunning ? "Running..." : "Run"}
-							</Button>
-							{user ? (
-								<Button
-									size="sm"
-									className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white border-0"
-									onClick={handleSubmit}
-									disabled={isSubmitting}
-								>
-									{isSubmitting ? "Submitting..." : "Submit"}
-								</Button>
-							) : (
-								<Button
-									size="sm"
-									className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white border-0"
-									onClick={() =>
-										navigate(
-											`/signin?redirect=${encodeURIComponent(location.pathname)}`,
-										)
-									}
-								>
-									Signin to Submit
-								</Button>
-							)}
-						</div>
-					</div>
+										<SelectContent
+											sideOffset={6}
+											align="center"
+											className="w-[190px] rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+										>
+											<SelectItem
+												className="rounded-xl px-3 py-2"
+												value="javascript"
+											>
+												JavaScript
+											</SelectItem>
+											<SelectItem
+												className="rounded-xl px-3 py-2"
+												value="python"
+											>
+												Python
+											</SelectItem>
+											<SelectItem className="rounded-xl px-3 py-2" value="java">
+												Java
+											</SelectItem>
+											<SelectItem className="rounded-xl px-3 py-2" value="cpp">
+												C++
+											</SelectItem>
+										</SelectContent>
+									</Select>
 
-					<div className="flex-1 overflow-hidden">
-						<Editor
-							height="100%"
-							language={MONACO_LANG[language]}
-							value={codeMap[language]}
-							onChange={handleCodeChange}
-							theme="vs-dark"
-							options={{
-								fontSize: 13,
-								lineHeight: 22,
-								minimap: { enabled: false },
-								scrollBeyondLastLine: false,
-								padding: { top: 16, bottom: 16 },
-								fontFamily:
-									"'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-								fontLigatures: true,
-								tabSize: 4,
-								renderLineHighlight: "line",
-								cursorBlinking: "smooth",
-								smoothScrolling: true,
-								overviewRulerBorder: false,
-								hideCursorInOverviewRuler: true,
-							}}
-						/>
-					</div>
+									<div className="ml-auto flex flex-wrap items-center gap-3">
+										<div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+											{saveLabel}
+										</div>
 
-					<div className="border-t bg-background flex-shrink-0">
-						<div className="flex items-center border-b px-3">
-							<div className="py-2 text-xs font-medium border-b-2 border-foreground text-foreground px-1">
-								Console
+										<Button
+											variant="outline"
+											className="h-12 rounded-2xl border-slate-200 bg-white px-5 text-sm font-medium hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900"
+											onClick={() =>
+												setCodeMap((prev) => ({
+													...prev,
+													[language]: DEFAULT_CODE[language],
+												}))
+											}
+										>
+											Reset
+										</Button>
+
+										<Button
+											variant="outline"
+											onClick={handleRun}
+											disabled={isRunning}
+											className="h-12 rounded-2xl border-indigo-200 bg-indigo-50 px-5 text-sm font-medium text-indigo-600 hover:bg-indigo-100 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300"
+										>
+											{isRunning ? "Running..." : "Run Code"}
+										</Button>
+
+										{user ? (
+											<Button
+												onClick={handleSubmit}
+												disabled={isSubmitting}
+												className="h-12 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 text-sm font-medium text-white "
+											>
+												{isSubmitting ? "Submitting..." : "Submit"}
+											</Button>
+										) : (
+											<Button
+												onClick={() =>
+													navigate(
+														`/signin?redirect=${encodeURIComponent(location.pathname)}`,
+													)
+												}
+												className="h-12 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 text-sm font-medium text-white "
+											>
+												Signin to Submit
+											</Button>
+										)}
+									</div>
+								</div>
+
+								<div className="p-5">
+									<div
+										className="overflow-hidden rounded-[28px] border border-slate-200 bg-black shadow-inner dark:border-zinc-700"
+										onWheel={handleEditorWheel}
+									>
+										<Editor
+											onMount={(editor) => {
+												editorRef.current = editor;
+											}}
+											height="540px"
+											language={MONACO_LANG[language]}
+											value={codeMap[language]}
+											onChange={handleCodeChange}
+											theme="vs-dark"
+											options={{
+												fontSize: 14,
+												lineHeight: 24,
+												minimap: { enabled: false },
+												scrollBeyondLastLine: false,
+												padding: { top: 16, bottom: 16 },
+												fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+												fontLigatures: true,
+												tabSize: 4,
+												renderLineHighlight: "line",
+												cursorBlinking: "smooth",
+												smoothScrolling: true,
+												mouseWheelScrollSensitivity: 1,
+												fastScrollSensitivity: 5,
+												alwaysConsumeMouseWheel: false,
+												scrollbar: {
+													verticalScrollbarSize: 10,
+													horizontalScrollbarSize: 10,
+													alwaysConsumeMouseWheel: false,
+													useShadows: false,
+												},
+												overviewRulerBorder: false,
+												hideCursorInOverviewRuler: true,
+											}}
+										/>
+									</div>
+								</div>
 							</div>
-							{runStatus && (
-								<span
-									className={cn(
-										"ml-auto text-[11px] font-medium",
-										runStatus === "Accepted" || runStatus.startsWith("Passed")
-											? "text-green-600"
-											: "text-muted-foreground",
-									)}
-								>
-									{runStatus}
-								</span>
-							)}
-						</div>
-						<div className="grid grid-cols-2 divide-x h-[120px]">
-							<div className="p-3 flex flex-col gap-1.5">
-								<p className="text-[11px] font-medium text-muted-foreground">
-									Custom input
-								</p>
-								<textarea
-									value={input}
-									onChange={(e) => setInput(e.target.value)}
-									className="flex-1 border rounded-md p-2 font-mono text-xs bg-muted resize-none outline-none focus:border-border/60"
-									placeholder={`[2,7,11,15]\n9`}
-								/>
-							</div>
-							<div className="p-3 flex flex-col gap-1.5">
-								<p className="text-[11px] font-medium text-muted-foreground">
-									Output
-								</p>
-								<div
-									className={cn(
-										"flex-1 border rounded-md p-2 font-mono text-xs bg-muted overflow-y-auto whitespace-pre",
-										outputColor,
-									)}
-								>
-									{output || "Run your code to see output here"}
+
+							<div className="grid gap-5 pb-1 xl:grid-cols-2">
+								<div className="overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-white/90 via-white/70 to-cyan-50/40  backdrop-blur-xl dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-cyan-950/10">
+									<div className="border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
+										<p className="text-sm font-semibold text-slate-900 dark:text-white">
+											Custom Input
+										</p>
+									</div>
+
+									<div className="p-0">
+										<Textarea
+											value={input}
+											onChange={(e) => setInput(e.target.value)}
+											placeholder="Enter your custom input here..."
+											className="h-[230px] w-full resize-none rounded-b-2xl rounded-t-none border-0 border-t border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-zinc-700 dark:bg-zinc-950"
+										/>
+									</div>
+								</div>
+
+								<div className="overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-white/90 via-white/70 to-violet-50/40  backdrop-blur-xl dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-violet-950/10">
+									<div className="border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
+										<div className="flex items-center justify-between">
+											<p className="text-sm font-semibold text-slate-900 dark:text-white">
+												Output
+											</p>
+
+											{runStatus && (
+												<div
+													className={cn(
+														"rounded-full px-3 py-1 text-[11px] font-medium",
+														runStatus === "Accepted" ||
+															runStatus === "Run Successful"
+															? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-300"
+															: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300",
+													)}
+												>
+													{runStatus}
+												</div>
+											)}
+										</div>
+									</div>
+
+									<div className="p-0">
+										<div
+											className={cn(
+												"h-[230px] overflow-y-auto  rounded-b-2xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre-wrap dark:border-zinc-700 dark:bg-zinc-950",
+												outputColor,
+											)}
+										>
+											{output || "Run your code to see output here"}
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
