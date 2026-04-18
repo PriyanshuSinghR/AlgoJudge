@@ -12,12 +12,25 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_CODE } from "@/lib/constant";
-import { useRunProblem, useSubmitProblem } from "@/hooks/useConsole";
+import {
+	useRunProblem,
+	useSubmissionHistory,
+	useSubmitProblem,
+} from "@/hooks/useConsole";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CheckCircle2, XCircle, Clock3, AlertTriangle } from "lucide-react";
 
 const MONACO_LANG = {
 	javascript: "javascript",
@@ -40,38 +53,109 @@ export default function SingleProblemPage() {
 	const { mutate: submitCode, isPending: isSubmitting } = useSubmitProblem();
 	const { data: user } = useCurrentUser();
 	const { data: problem, isLoading } = useProblemBySlug(slug);
+	const { data: submissionHistory = [], isLoading: isSubmissionLoading } =
+		useSubmissionHistory(problem?._id);
 	const editorRef = useRef(null);
-	const [language, setLanguage] = useState("javascript");
+	const [language, setLanguage] = useState(() => {
+		return localStorage.getItem("selected-lang") || "javascript";
+	});
+	const [selectedSubmission, setSelectedSubmission] = useState(null);
 	const [codeMap, setCodeMap] = useState(DEFAULT_CODE);
 	const [input, setInput] = useState("");
 	const [output, setOutput] = useState("");
 	const [runStatus, setRunStatus] = useState("");
 	const [saveLabel, setSaveLabel] = useState("Auto-saved");
 	const [outputColor, setOutputColor] = useState("text-muted-foreground");
+	const savedCodeMapRef = useRef({});
+	const previousUserRef = useRef(user);
 
 	useEffect(() => {
 		const saved = localStorage.getItem(`code-${slug}`);
-		if (saved) setCodeMap(JSON.parse(saved));
+		const parsedSaved = saved ? JSON.parse(saved) : {};
+
+		savedCodeMapRef.current = parsedSaved;
+
+		setCodeMap({
+			...DEFAULT_CODE,
+			...parsedSaved, // cache first
+		});
 	}, [slug]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
-			localStorage.setItem(`code-${slug}`, JSON.stringify(codeMap));
+			const filteredCodeMap = {};
+
+			Object.keys(codeMap).forEach((lang) => {
+				const currentCode = codeMap[lang]?.trim();
+				const defaultCode = DEFAULT_CODE[lang]?.trim();
+
+				if (currentCode && currentCode !== defaultCode) {
+					filteredCodeMap[lang] = codeMap[lang];
+				}
+			});
+
+			if (Object.keys(filteredCodeMap).length > 0) {
+				localStorage.setItem(`code-${slug}`, JSON.stringify(filteredCodeMap));
+			} else {
+				localStorage.removeItem(`code-${slug}`);
+			}
+
 			setSaveLabel("Saved just now");
 			setTimeout(() => setSaveLabel("Auto-saved"), 2000);
 		}, 800);
+
 		return () => clearTimeout(timer);
 	}, [codeMap, slug]);
-
-	useEffect(() => {
-		const savedLang = localStorage.getItem("selected-lang");
-		if (savedLang) setLanguage(savedLang);
-	}, []);
 
 	useEffect(() => {
 		localStorage.setItem("selected-lang", language);
 	}, [language]);
 
+	useEffect(() => {
+		if (!user || submissionHistory.length === 0) return;
+
+		setCodeMap((prev) => {
+			const next = { ...prev };
+			let changed = false;
+
+			Object.keys(DEFAULT_CODE).forEach((lang) => {
+				// if cache already exists for this language, keep it
+				if (savedCodeMapRef.current?.[lang]) return;
+
+				// only fill from latest submission if editor still has default/empty code
+				const latestSubmissionForLang = submissionHistory.find(
+					(submission) => submission.language === lang,
+				);
+
+				if (
+					latestSubmissionForLang?.code &&
+					(!prev[lang] || prev[lang] === DEFAULT_CODE[lang])
+				) {
+					next[lang] = latestSubmissionForLang.code;
+					changed = true;
+				}
+			});
+
+			return changed ? next : prev;
+		});
+	}, [user, submissionHistory]);
+
+	useEffect(() => {
+		if (previousUserRef.current && !user) {
+			Object.keys(localStorage).forEach((key) => {
+				if (key.startsWith("code-")) {
+					localStorage.removeItem(key);
+				}
+			});
+
+			localStorage.removeItem("selected-lang");
+			savedCodeMapRef.current = {};
+			setCodeMap(DEFAULT_CODE);
+			setLanguage("javascript");
+		}
+
+		previousUserRef.current = user;
+	}, [user]);
 	const handleCodeChange = (value) => {
 		setCodeMap((prev) => ({ ...prev, [language]: value ?? "" }));
 	};
@@ -194,10 +278,19 @@ ${result.error}`,
 	const handleLanguageChange = (lang) => {
 		setLanguage(lang);
 
-		setCodeMap((prev) => ({
-			...prev,
-			[lang]: prev[lang] || DEFAULT_CODE[lang],
-		}));
+		setCodeMap((prev) => {
+			if (prev[lang]) return prev;
+
+			const latestSubmissionForLang = submissionHistory.find(
+				(submission) => submission.language === lang,
+			);
+
+			return {
+				...prev,
+				[lang]:
+					latestSubmissionForLang?.code || prev[lang] || DEFAULT_CODE[lang],
+			};
+		});
 	};
 
 	const handleEditorWheel = (e) => {
@@ -305,99 +398,246 @@ ${result.error}`,
 						</div>
 					</div>
 
-					<div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-zinc-700">
-						<div className="space-y-6">
-							<div className="rounded-[24px] border border-slate-200 bg-white/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
-								<p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
-									Description
-								</p>
+					<div className="min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-4">
+						<Tabs
+							defaultValue="description"
+							className="flex h-full min-h-0 flex-col"
+						>
+							<div className="shrink-0 pb-4">
+								<TabsList className="grid w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 dark:bg-zinc-900">
+									<TabsTrigger
+										value="description"
+										className="rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800"
+									>
+										Description
+									</TabsTrigger>
 
-								<p className="text-sm leading-7 text-slate-600 dark:text-zinc-300">
-									{problem.description}
-								</p>
+									<TabsTrigger
+										value="submissions"
+										className="rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800"
+									>
+										Submissions
+									</TabsTrigger>
+								</TabsList>
 							</div>
 
-							{problem.examples?.length > 0 && (
-								<div className="space-y-4">
-									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
-										Examples
-									</p>
+							<TabsContent
+								value="description"
+								className="mt-0 min-h-0 flex-1 overflow-hidden"
+							>
+								<ScrollArea className="h-full pr-2">
+									<div className="space-y-6 pb-6">
+										<div className="rounded-[24px] border border-slate-200 bg-white/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
+											<p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
+												Description
+											</p>
 
-									{problem.examples.map((ex, i) => (
-										<div
-											key={i}
-											className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/80 dark:border-zinc-800 dark:bg-zinc-950/40"
-										>
-											<div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-												<p className="text-sm font-semibold text-slate-900 dark:text-white">
-													Example {i + 1}
+											<p className="text-sm leading-7 text-slate-600 dark:text-zinc-300">
+												{problem.description}
+											</p>
+										</div>
+
+										{problem.examples?.length > 0 && (
+											<div className="space-y-4">
+												<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
+													Examples
 												</p>
 
-												<div className="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-													Sample
-												</div>
-											</div>
+												{problem.examples.map((ex, i) => (
+													<div
+														key={i}
+														className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/80 dark:border-zinc-800 dark:bg-zinc-950/40"
+													>
+														<div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+															<p className="text-sm font-semibold text-slate-900 dark:text-white">
+																Example {i + 1}
+															</p>
 
-											<div className="space-y-4 p-5">
-												<div>
-													<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
-														Input
-													</p>
+															<div className="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+																Sample
+															</div>
+														</div>
 
-													<pre className="overflow-x-auto rounded-2xl bg-slate-100 p-4 font-mono text-xs text-slate-700 dark:bg-zinc-900 dark:text-zinc-300">
-														{ex.input}
-													</pre>
-												</div>
+														<div className="space-y-4 p-5">
+															<div>
+																<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
+																	Input
+																</p>
 
-												<div>
-													<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
-														Output
-													</p>
+																<pre className="overflow-x-auto rounded-2xl bg-slate-100 p-4 font-mono text-xs text-slate-700 dark:bg-zinc-900 dark:text-zinc-300">
+																	{ex.input}
+																</pre>
+															</div>
 
-													<pre className="overflow-x-auto rounded-2xl bg-slate-100 p-4 font-mono text-xs text-slate-700 dark:bg-zinc-900 dark:text-zinc-300">
-														{ex.output}
-													</pre>
-												</div>
+															<div>
+																<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
+																	Output
+																</p>
 
-												{ex.explanation && (
-													<div>
-														<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
-															Explanation
-														</p>
+																<pre className="overflow-x-auto rounded-2xl bg-slate-100 p-4 font-mono text-xs text-slate-700 dark:bg-zinc-900 dark:text-zinc-300">
+																	{ex.output}
+																</pre>
+															</div>
 
-														<div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm leading-6 text-slate-600 dark:border-indigo-500/20 dark:bg-indigo-500/5 dark:text-zinc-300">
-															{ex.explanation}
+															{ex.explanation && (
+																<div>
+																	<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
+																		Explanation
+																	</p>
+
+																	<div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm leading-6 text-slate-600 dark:border-indigo-500/20 dark:bg-indigo-500/5 dark:text-zinc-300">
+																		{ex.explanation}
+																	</div>
+																</div>
+															)}
 														</div>
 													</div>
-												)}
+												))}
 											</div>
-										</div>
-									))}
-								</div>
-							)}
+										)}
 
-							{constraints.length > 0 && (
-								<div className="rounded-[24px] border border-slate-200 bg-white/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
-									<p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
-										Constraints
-									</p>
+										{constraints.length > 0 && (
+											<div className="rounded-[24px] border border-slate-200 bg-white/80 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
+												<p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500">
+													Constraints
+												</p>
 
-									<div className="space-y-2">
-										{constraints.map((constraint, index) => (
-											<div
-												key={index}
-												className="flex items-start gap-3 rounded-2xl bg-slate-100 px-4 py-3 dark:bg-zinc-900"
-											>
-												<div className="mt-1.5 h-2 w-2 rounded-full bg-indigo-500" />
-												<code className="font-mono text-xs text-slate-700 dark:text-zinc-300">
-													{constraint}
-												</code>
+												<div className="space-y-2">
+													{constraints.map((constraint, index) => (
+														<div
+															key={index}
+															className="flex items-start gap-3 rounded-2xl bg-slate-100 px-4 py-3 dark:bg-zinc-900"
+														>
+															<div className="mt-1.5 h-2 w-2 rounded-full bg-indigo-500" />
+															<code className="font-mono text-xs text-slate-700 dark:text-zinc-300">
+																{constraint}
+															</code>
+														</div>
+													))}
+												</div>
 											</div>
-										))}
+										)}
 									</div>
-								</div>
-							)}
-						</div>
+								</ScrollArea>
+							</TabsContent>
+
+							<TabsContent
+								value="submissions"
+								className="mt-0 min-h-0 flex-1 overflow-hidden"
+							>
+								<ScrollArea className="h-full pr-2">
+									<div className="space-y-4 pb-6">
+										{!user ? (
+											<div className="flex h-[320px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white/70 p-6 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
+												<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+													<Clock3 className="h-6 w-6" />
+												</div>
+
+												<p className="text-base font-semibold text-slate-900 dark:text-white">
+													Signin to view submissions
+												</p>
+
+												<p className="mt-2 max-w-[260px] text-sm leading-6 text-slate-500 dark:text-zinc-400">
+													View your previous submissions, accepted solutions,
+													wrong answers, and submission history for this
+													problem.
+												</p>
+
+												<Button
+													onClick={() =>
+														navigate(
+															`/signin?redirect=${encodeURIComponent(location.pathname)}`,
+														)
+													}
+													className="mt-6 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 text-sm font-medium text-white"
+												>
+													Signin
+												</Button>
+											</div>
+										) : isSubmissionLoading ? (
+											<div className="flex h-[300px] items-center justify-center">
+												<div className="flex flex-col items-center gap-3">
+													<div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500" />
+													<p className="text-sm text-slate-500 dark:text-zinc-400">
+														Loading submissions...
+													</p>
+												</div>
+											</div>
+										) : submissionHistory.length === 0 ? (
+											<div className="flex h-[300px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white/70 p-6 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
+												<Clock3 className="mb-3 h-10 w-10 text-slate-400" />
+												<p className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+													No submissions yet
+												</p>
+												<p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+													Your submissions will appear here.
+												</p>
+											</div>
+										) : (
+											submissionHistory.map((submission) => {
+												const isAccepted = submission.status === "Accepted";
+												const isWrong = submission.status === "Wrong Answer";
+												const isRuntime = submission.status === "Runtime Error";
+
+												return (
+													<div
+														key={submission._id}
+														className="rounded-[24px] border border-slate-200 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-950/40"
+													>
+														<div className="flex items-start justify-between gap-3">
+															<div className="flex items-center gap-3">
+																<div
+																	className={cn(
+																		"flex h-10 w-10 items-center justify-center rounded-2xl",
+																		isAccepted
+																			? "bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-300"
+																			: isWrong
+																				? "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-300"
+																				: "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300",
+																	)}
+																>
+																	{isAccepted ? (
+																		<CheckCircle2 className="h-5 w-5" />
+																	) : isWrong ? (
+																		<XCircle className="h-5 w-5" />
+																	) : (
+																		<AlertTriangle className="h-5 w-5" />
+																	)}
+																</div>
+
+																<div>
+																	<p className="text-sm font-semibold text-slate-900 dark:text-white">
+																		{submission.status}
+																	</p>
+
+																	<p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+																		{submission.language?.toUpperCase()} •{" "}
+																		{new Date(
+																			submission.createdAt,
+																		).toLocaleString()}
+																	</p>
+																</div>
+															</div>
+
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() =>
+																	setSelectedSubmission(submission)
+																}
+																className="rounded-xl border-slate-200 bg-white text-xs font-medium dark:border-zinc-700 dark:bg-zinc-900"
+															>
+																View Code
+															</Button>
+														</div>
+													</div>
+												);
+											})
+										)}
+									</div>
+								</ScrollArea>
+							</TabsContent>
+						</Tabs>
 					</div>
 				</div>
 
@@ -587,6 +827,98 @@ ${result.error}`,
 					</div>
 				</div>
 			</div>
+			<Dialog
+				open={!!selectedSubmission}
+				onOpenChange={(open) => {
+					if (!open) setSelectedSubmission(null);
+				}}
+			>
+				<DialogContent className="!max-w-[90vw] w-[90vw] h-[88vh] flex flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white p-0 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+					<div className="shrink-0 border-b border-slate-100 px-6 py-5 dark:border-zinc-800">
+						<div className="flex items-center gap-4 pr-8">
+							<div
+								className={cn(
+									"flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl",
+									selectedSubmission?.status === "Accepted"
+										? "bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-300"
+										: selectedSubmission?.status === "Wrong Answer"
+											? "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-300"
+											: "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300",
+								)}
+							>
+								{selectedSubmission?.status === "Accepted" ? (
+									<CheckCircle2 className="h-7 w-7" />
+								) : selectedSubmission?.status === "Wrong Answer" ? (
+									<XCircle className="h-7 w-7" />
+								) : (
+									<AlertTriangle className="h-7 w-7" />
+								)}
+							</div>
+
+							<div>
+								<DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+									Submission Code
+								</DialogTitle>
+								<div className="mt-3 flex flex-wrap items-center gap-2">
+									<Badge
+										className={cn(
+											"rounded-full border px-3 py-1 text-[11px]",
+											selectedSubmission?.status === "Accepted"
+												? "border-green-200 bg-green-50 text-green-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-300"
+												: selectedSubmission?.status === "Wrong Answer"
+													? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+													: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300",
+										)}
+									>
+										{selectedSubmission?.status}
+									</Badge>
+									<div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+										{selectedSubmission?.language?.toUpperCase()}
+									</div>
+									<div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+										{new Date(selectedSubmission?.createdAt).toLocaleString()}
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Editor */}
+					<div className="min-h-0 flex-1 p-5">
+						<div className="h-full overflow-hidden rounded-[24px] border border-zinc-700 bg-[#0d1117]">
+							<Editor
+								height="100%"
+								language={
+									MONACO_LANG[selectedSubmission?.language] || "javascript"
+								}
+								value={selectedSubmission?.code || ""}
+								theme="vs-dark"
+								options={{
+									readOnly: true,
+									fontSize: 15,
+									lineHeight: 26,
+									minimap: { enabled: false },
+									scrollBeyondLastLine: false,
+									padding: { top: 20, bottom: 20 },
+									fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+									fontLigatures: true,
+									tabSize: 4,
+									renderLineHighlight: "line",
+									smoothScrolling: true,
+									automaticLayout: true,
+									scrollbar: {
+										verticalScrollbarSize: 10,
+										horizontalScrollbarSize: 10,
+										useShadows: false,
+									},
+									overviewRulerBorder: false,
+									hideCursorInOverviewRuler: true,
+								}}
+							/>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

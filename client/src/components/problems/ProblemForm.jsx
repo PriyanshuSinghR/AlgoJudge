@@ -12,7 +12,12 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, FileText, Lightbulb, ShieldCheck } from "lucide-react";
 
-export default function ProblemForm({ defaultValues, onSubmit, isSubmitting }) {
+export default function ProblemForm({
+	defaultValues,
+	onSubmit,
+	isSubmitting,
+	action,
+}) {
 	const { register, handleSubmit, control, setValue, watch } = useForm({
 		defaultValues,
 	});
@@ -167,17 +172,31 @@ export default function ProblemForm({ defaultValues, onSubmit, isSubmitting }) {
 							</div>
 
 							<div className="space-y-3">
-								<Input
-									{...register(`examples.${index}.input`)}
-									placeholder="Input"
-									className="h-12 rounded-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
-								/>
+								<div className="grid gap-4 lg:grid-cols-2">
+									<div className="space-y-2">
+										<label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+											Input
+										</label>
 
-								<Input
-									{...register(`examples.${index}.output`)}
-									placeholder="Output"
-									className="h-12 rounded-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
-								/>
+										<Textarea
+											{...register(`examples.${index}.input`)}
+											placeholder={`1 2 3\n4 5 6`}
+											className="h-[120px] resize-none overflow-y-auto rounded-2xl border-slate-200 bg-white p-4 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+										/>
+									</div>
+
+									<div className="space-y-2">
+										<label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+											Output
+										</label>
+
+										<Textarea
+											{...register(`examples.${index}.output`)}
+											placeholder="6"
+											className="h-[120px] resize-none overflow-y-auto rounded-2xl border-slate-200 bg-white p-4 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+										/>
+									</div>
+								</div>
 
 								<Textarea
 									{...register(`examples.${index}.explanation`)}
@@ -240,17 +259,31 @@ export default function ProblemForm({ defaultValues, onSubmit, isSubmitting }) {
 							</div>
 
 							<div className="space-y-3">
-								<Input
-									{...register(`testCases.${index}.input`)}
-									placeholder="Input"
-									className="h-12 rounded-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
-								/>
+								<div className="grid gap-4 lg:grid-cols-2">
+									<div className="space-y-2">
+										<label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+											Input
+										</label>
 
-								<Input
-									{...register(`testCases.${index}.output`)}
-									placeholder="Expected Output"
-									className="h-12 rounded-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
-								/>
+										<Textarea
+											{...register(`testCases.${index}.input`)}
+											placeholder={`10\n1 2 3 4 5`}
+											className="h-[120px] resize-none overflow-y-auto rounded-2xl border-slate-200 bg-white p-4 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+										/>
+									</div>
+
+									<div className="space-y-2">
+										<label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+											Expected Output
+										</label>
+
+										<Textarea
+											{...register(`testCases.${index}.output`)}
+											placeholder="15"
+											className="h-[120px] resize-none overflow-y-auto rounded-2xl border-slate-200 bg-white p-4 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+										/>
+									</div>
+								</div>
 							</div>
 						</div>
 					))}
@@ -263,7 +296,7 @@ export default function ProblemForm({ defaultValues, onSubmit, isSubmitting }) {
 					disabled={isSubmitting}
 					className="h-12 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-8 text-white shadow-lg shadow-indigo-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
 				>
-					{isSubmitting ? "Saving..." : "Create Problem"}
+					{isSubmitting ? "Saving..." : `${action} Problem`}
 				</Button>
 			</div>
 		</form>

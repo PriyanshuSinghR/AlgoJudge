@@ -93,6 +93,7 @@ export default function EditProblemPage() {
 					}}
 					onSubmit={handleSubmit}
 					isSubmitting={isPending}
+					action="Update"
 				/>
 			</div>
 		</div>

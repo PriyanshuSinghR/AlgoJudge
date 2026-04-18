@@ -57,6 +57,7 @@ export default function CreateProblemPage() {
 				}}
 				onSubmit={handleSubmit}
 				isSubmitting={isPending}
+				action="Create"
 			/>
 		</div>
 	);

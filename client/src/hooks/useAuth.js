@@ -49,6 +49,14 @@ export const useSignOut = () => {
 	return useMutation({
 		mutationFn: signout,
 		onSuccess: () => {
+			Object.keys(localStorage).forEach((key) => {
+				if (key.startsWith("code-")) {
+					localStorage.removeItem(key);
+				}
+			});
+
+			localStorage.removeItem("selected-lang");
+
 			queryClient.setQueryData(["auth"], null);
 		},
 	});
