@@ -8,9 +8,15 @@ import EditProblemPage from "./pages/EditProblem";
 import SingleProblemPage from "./pages/SingleProblem";
 import CompilerPage from "./pages/Compiler";
 import HomePage from "./pages/Home";
+import ProfilePage from "./pages/Profile";
 
 const APP_ROUTES = [
 	{ path: "", element: <HomePage />, permission: "public" },
+	{
+		path: "/profile",
+		element: <ProfilePage />,
+		permission: "protected",
+	},
 	{ path: "/problems", element: <ProblemsPage />, permission: "public" },
 	{
 		path: "/create-problem",

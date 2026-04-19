@@ -206,4 +206,63 @@ const getCurrentUser = async (req, res) => {
 	}
 };
 
-export { signup, signin, signout, getCurrentUser };
+const updateCurrentUser = async (req, res) => {
+	try {
+		const token = req.cookies.token;
+
+		if (!token) {
+			return res.status(401).json({
+				success: false,
+				message: "Not authenticated",
+			});
+		}
+
+		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+		const { name, email } = req.body;
+
+		if (!name || !email) {
+			return res.status(400).json({
+				success: false,
+				message: "Name and email are required",
+			});
+		}
+
+		const existingUser = await AuthUser.findOne({
+			email: email.toLowerCase(),
+			_id: { $ne: decoded.id },
+		});
+
+		if (existingUser) {
+			return res.status(409).json({
+				success: false,
+				message: "Email already exists",
+			});
+		}
+
+		const user = await AuthUser.findByIdAndUpdate(
+			decoded.id,
+			{
+				name: name.trim(),
+				email: email.toLowerCase().trim(),
+			},
+			{
+				new: true,
+				runValidators: true,
+			},
+		).select("-password");
+
+		return res.status(200).json({
+			success: true,
+			message: "Profile updated successfully",
+			user,
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			message: error.toString(),
+		});
+	}
+};
+
+export { signup, signin, signout, getCurrentUser, updateCurrentUser };

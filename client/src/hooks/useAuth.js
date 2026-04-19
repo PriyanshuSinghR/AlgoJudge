@@ -1,4 +1,10 @@
-import { getCurrentUser, signin, signout, signup } from "@/api/authApi";
+import {
+	getCurrentUser,
+	signin,
+	signout,
+	signup,
+	updateCurrentUser,
+} from "@/api/authApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const useSignIn = () => {
@@ -58,6 +64,17 @@ export const useSignOut = () => {
 			localStorage.removeItem("selected-lang");
 
 			queryClient.setQueryData(["auth"], null);
+		},
+	});
+};
+
+export const useUpdateCurrentUser = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: updateCurrentUser,
+		onSuccess: (response) => {
+			queryClient.setQueryData(["auth"], response.data.user);
 		},
 	});
 };
