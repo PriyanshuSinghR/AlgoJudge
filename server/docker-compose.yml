@@ -1,11 +1,19 @@
-# docker-compose.yml
-
-version: "3.8"
-
 services:
   backend:
-    build: ./server
+    build: .
+    container_name: algojudge-backend
     ports:
       - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - code_volume:/app/codes
+      - input_volume:/app/inputs
+    env_file:
+      - .env
+    environment:
+      - CONTAINER_NAME=algojudge-backend
+    restart: unless-stopped
+
+volumes:
+  code_volume:
+  input_volume:

@@ -46,8 +46,12 @@ export const generateFile = (language, code, input) => {
 
 export const cleanupFiles = (...filePaths) => {
 	for (const filePath of filePaths) {
-		if (filePath && fs.existsSync(filePath)) {
-			fs.unlinkSync(filePath);
+		try {
+			if (filePath && fs.existsSync(filePath)) {
+				fs.unlinkSync(filePath);
+			}
+		} catch (err) {
+			console.error("Cleanup failed:", err);
 		}
 	}
 };
