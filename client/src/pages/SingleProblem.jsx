@@ -55,7 +55,7 @@ export default function SingleProblemPage() {
 	const { data: problem, isLoading } = useProblemBySlug(slug);
 	const { data: submissionHistory = [], isLoading: isSubmissionLoading } =
 		useSubmissionHistory(problem?._id);
-	const editorRef = useRef(null);
+
 	const [language, setLanguage] = useState(() => {
 		return localStorage.getItem("selected-lang") || "javascript";
 	});
@@ -291,32 +291,6 @@ ${result.error}`,
 					latestSubmissionForLang?.code || prev[lang] || DEFAULT_CODE[lang],
 			};
 		});
-	};
-
-	const handleEditorWheel = (e) => {
-		const editor = editorRef.current;
-		if (!editor) return;
-
-		const scrollTop = editor.getScrollTop();
-		const scrollHeight = editor.getScrollHeight();
-		const editorHeight = editor.getLayoutInfo().height;
-
-		const maxScrollTop = scrollHeight - editorHeight;
-		const deltaY = e.deltaY;
-
-		const isScrollingDown = deltaY > 0;
-		const isScrollingUp = deltaY < 0;
-
-		const atTop = scrollTop <= 0;
-		const atBottom = scrollTop >= maxScrollTop - 2;
-
-		const canEditorScrollDown = isScrollingDown && !atBottom;
-		const canEditorScrollUp = isScrollingUp && !atTop;
-
-		if (canEditorScrollDown || canEditorScrollUp) {
-			e.stopPropagation();
-			return;
-		}
 	};
 
 	if (isLoading) {
@@ -728,14 +702,8 @@ ${result.error}`,
 								</div>
 
 								<div className="p-5">
-									<div
-										className="overflow-hidden rounded-[28px] border border-slate-200 bg-black shadow-inner dark:border-zinc-700"
-										onWheel={handleEditorWheel}
-									>
+									<div className="overflow-hidden rounded-[28px] border border-slate-200 bg-black shadow-inner dark:border-zinc-700">
 										<Editor
-											onMount={(editor) => {
-												editorRef.current = editor;
-											}}
 											height="540px"
 											language={MONACO_LANG[language]}
 											value={codeMap[language]}

@@ -205,6 +205,15 @@ export default function CompilerPage() {
 									renderLineHighlight: "line",
 									cursorBlinking: "smooth",
 									smoothScrolling: true,
+									mouseWheelScrollSensitivity: 1,
+									fastScrollSensitivity: 5,
+									alwaysConsumeMouseWheel: false,
+									scrollbar: {
+										verticalScrollbarSize: 10,
+										horizontalScrollbarSize: 10,
+										alwaysConsumeMouseWheel: false,
+										useShadows: false,
+									},
 									overviewRulerBorder: false,
 								}}
 							/>
