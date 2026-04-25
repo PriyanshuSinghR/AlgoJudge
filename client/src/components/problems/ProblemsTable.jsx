@@ -76,7 +76,7 @@ export default function ProblemsTable({ problems, user }) {
 							<TableRow
 								key={problem._id}
 								className="group cursor-pointer border-b border-slate-100/80 transition-all duration-200 hover:bg-indigo-50/40 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-								onClick={() => navigate(`/problem/${problem.slug}`)}
+								onClick={() => navigate(`/problems/${problem.slug}`)}
 							>
 								<TableCell className="py-5 pl-6">
 									<div className="flex items-center gap-4">

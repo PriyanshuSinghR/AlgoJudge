@@ -29,7 +29,7 @@ const APP_ROUTES = [
 		permission: "protected",
 	},
 	{
-		path: "/problem/:slug",
+		path: "/problems/:slug",
 		element: <SingleProblemPage />,
 		permission: "public",
 	},

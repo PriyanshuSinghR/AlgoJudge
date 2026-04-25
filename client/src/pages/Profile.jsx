@@ -15,17 +15,44 @@ import {
 	X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 
-import { useCurrentUser, useUpdateCurrentUser } from "@/hooks/useAuth";
+import {
+	useChangePassword,
+	useCurrentUser,
+	useUpdateCurrentUser,
+} from "@/hooks/useAuth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/useToast";
 
 export default function ProfilePage() {
+	const toast = useToast();
 	const navigate = useNavigate();
 	const { data: user } = useCurrentUser();
+
 	const { mutate: updateProfile, isPending } = useUpdateCurrentUser();
 	const [isEditing, setIsEditing] = useState(false);
+	const [openPasswordModal, setOpenPasswordModal] = useState(false);
+	const {
+		register: registerPassword,
+		handleSubmit: handlePasswordSubmit,
+		reset: resetPassword,
+		watch,
+		formState: { errors },
+	} = useForm({
+		mode: "onChange",
+	});
+
+	const newPassword = watch("newPassword");
+
+	const { mutate: changePassword, isPending: isChanging } = useChangePassword();
 
 	const {
 		register,
@@ -48,17 +75,6 @@ export default function ProfilePage() {
 		}
 	}, [user, reset]);
 
-	const initials = useMemo(() => {
-		if (!user?.name) return "U";
-
-		return user.name
-			.split(" ")
-			.map((part) => part[0])
-			.join("")
-			.slice(0, 2)
-			.toUpperCase();
-	}, [user]);
-
 	const onSubmit = (data) => {
 		updateProfile(data, {
 			onSuccess: (response) => {
@@ -68,8 +84,44 @@ export default function ProfilePage() {
 				});
 
 				setIsEditing(false);
+
+				toast.success("Profile updated", "Your details were saved");
+			},
+			onError: (err) => {
+				toast.error(
+					"Update failed",
+					err?.response?.data?.message || "Something went wrong",
+				);
 			},
 		});
+	};
+
+	const onPasswordSubmit = (data) => {
+		if (data.newPassword !== data.confirmPassword) {
+			toast.error("Password mismatch", "Passwords do not match");
+			return;
+		}
+
+		changePassword(
+			{ newPassword: data.newPassword },
+			{
+				onSuccess: () => {
+					resetPassword();
+					setOpenPasswordModal(false);
+
+					toast.success(
+						"Password updated",
+						"Your password has been changed successfully",
+					);
+				},
+				onError: (err) => {
+					toast.error(
+						"Update failed",
+						err?.response?.data?.message || "Failed to update password",
+					);
+				},
+			},
+		);
 	};
 
 	if (!user) {
@@ -290,12 +342,96 @@ export default function ProfilePage() {
 											</span>
 										</Button>
 									)}
+									<Button
+										variant="outline"
+										className="h-[50px] w-full rounded-[10px] border-zinc-200 font-semibold dark:border-zinc-700"
+										onClick={() => setOpenPasswordModal(true)}
+									>
+										<ShieldCheck className="mr-2 h-4 w-4" />
+										Change Password
+									</Button>
 								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
+			<Dialog
+				open={openPasswordModal}
+				onOpenChange={(open) => {
+					setOpenPasswordModal(open);
+
+					if (!open) {
+						resetPassword({
+							newPassword: "",
+							confirmPassword: "",
+						});
+					}
+				}}
+			>
+				<DialogContent className="sm:max-w-[420px] rounded-2xl">
+					<DialogHeader>
+						<DialogTitle className="text-xl font-bold">
+							Change Password
+						</DialogTitle>
+					</DialogHeader>
+
+					<div className="space-y-5 mt-2">
+						{/* New Password */}
+						<div>
+							<label className="mb-2 block text-sm font-medium">
+								New Password
+							</label>
+							<Input
+								type="password"
+								{...registerPassword("newPassword", {
+									required: "Password is required",
+									minLength: {
+										value: 6,
+										message: "Minimum 6 characters required",
+									},
+								})}
+								className="h-11"
+							/>
+
+							{errors.newPassword && (
+								<p className="mt-1 text-xs text-red-500">
+									{errors.newPassword.message}
+								</p>
+							)}
+						</div>
+
+						<div>
+							<label className="mb-2 block text-sm font-medium">
+								Confirm Password
+							</label>
+							<Input
+								type="password"
+								{...registerPassword("confirmPassword", {
+									required: "Please confirm password",
+									validate: (value) =>
+										value === newPassword || "Passwords do not match",
+								})}
+								className="h-11"
+							/>
+
+							{errors.confirmPassword && (
+								<p className="mt-1 text-xs text-red-500">
+									{errors.confirmPassword.message}
+								</p>
+							)}
+						</div>
+
+						<Button
+							onClick={handlePasswordSubmit(onPasswordSubmit)}
+							disabled={isChanging}
+							className="w-full h-11"
+						>
+							{isChanging ? "Updating..." : "Update Password"}
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

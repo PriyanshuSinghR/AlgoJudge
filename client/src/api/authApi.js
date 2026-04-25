@@ -5,3 +5,5 @@ export const signup = (payload) => api.post("auth/signup/", payload);
 export const signout = () => api.post("auth/signout/");
 export const getCurrentUser = () => api.get("auth/me/");
 export const updateCurrentUser = (payload) => api.put("auth/me", payload);
+export const changePassword = (payload) =>
+	api.put("auth/me/change-password", payload);

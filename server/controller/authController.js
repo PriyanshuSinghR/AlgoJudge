@@ -265,4 +265,51 @@ const updateCurrentUser = async (req, res) => {
 	}
 };
 
-export { signup, signin, signout, getCurrentUser, updateCurrentUser };
+const changePassword = async (req, res) => {
+	try {
+		const token = req.cookies.token;
+
+		if (!token) {
+			return res.status(401).json({
+				success: false,
+				message: "Not authenticated",
+			});
+		}
+
+		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+		const { newPassword } = req.body;
+
+		if (!newPassword || newPassword.length < 6) {
+			return res.status(400).json({
+				success: false,
+				message: "Password must be at least 6 characters",
+			});
+		}
+
+		const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+		await AuthUser.findByIdAndUpdate(decoded.id, {
+			password: hashedPassword,
+		});
+
+		return res.status(200).json({
+			success: true,
+			message: "Password updated successfully",
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			message: error.toString(),
+		});
+	}
+};
+
+export {
+	signup,
+	signin,
+	signout,
+	getCurrentUser,
+	updateCurrentUser,
+	changePassword,
+};

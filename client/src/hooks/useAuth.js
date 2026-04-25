@@ -1,4 +1,5 @@
 import {
+	changePassword,
 	getCurrentUser,
 	signin,
 	signout,
@@ -76,5 +77,11 @@ export const useUpdateCurrentUser = () => {
 		onSuccess: (response) => {
 			queryClient.setQueryData(["auth"], response.data.user);
 		},
+	});
+};
+
+export const useChangePassword = () => {
+	return useMutation({
+		mutationFn: changePassword,
 	});
 };
