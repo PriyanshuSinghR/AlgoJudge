@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Sparkles, Code2, Filter } from "lucide-react";
+import { DIFFICULTIES } from "@/lib/constant";
 
 export default function ProblemsPage() {
 	const navigate = useNavigate();
@@ -104,14 +105,23 @@ export default function ProblemsPage() {
 
 						<Select value={difficulty} onValueChange={setDifficulty}>
 							<SelectTrigger className="h-12 w-[180px] rounded-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-								<SelectValue placeholder="Difficulty" />
+								<SelectValue>{DIFFICULTIES[difficulty]}</SelectValue>
 							</SelectTrigger>
 
-							<SelectContent>
-								<SelectItem value="all">All Difficulties</SelectItem>
-								<SelectItem value="easy">Easy</SelectItem>
-								<SelectItem value="medium">Medium</SelectItem>
-								<SelectItem value="hard">Hard</SelectItem>
+							<SelectContent
+								sideOffset={6}
+								align="center"
+								className="w-[190px] rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+							>
+								{Object.entries(DIFFICULTIES).map(([value, label]) => (
+									<SelectItem
+										key={value}
+										value={value}
+										className="rounded-xl px-3 py-2"
+									>
+										{label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>

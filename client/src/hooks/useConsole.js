@@ -21,13 +21,13 @@ export const useSubmitProblem = () => {
 	});
 };
 
-export const useSubmissionHistory = (problemId) => {
+export const useSubmissionHistory = (problemId, user) => {
 	return useQuery({
 		queryKey: ["submissionHistory", problemId],
 		queryFn: async () => {
 			const res = await getSubmissionHistory(problemId);
 			return res.data.data;
 		},
-		enabled: !!problemId,
+		enabled: !!problemId && !!user,
 	});
 };

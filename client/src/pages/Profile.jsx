@@ -331,7 +331,10 @@ export default function ProfilePage() {
 										</>
 									) : (
 										<Button
-											onClick={() => setIsEditing(true)}
+											onClick={() => {
+												setIsEditing(true);
+												setOpenPasswordModal(false);
+											}}
 											className="group relative h-[50px] w-full overflow-hidden rounded-[10px] bg-zinc-950 font-semibold tracking-[0.04em] text-white shadow-[0_4px_20px_rgba(10,10,15,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(99,102,241,0.35)] dark:bg-white dark:text-zinc-900"
 										>
 											<div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-pink-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -345,7 +348,10 @@ export default function ProfilePage() {
 									<Button
 										variant="outline"
 										className="h-[50px] w-full rounded-[10px] border-zinc-200 font-semibold dark:border-zinc-700"
-										onClick={() => setOpenPasswordModal(true)}
+										onClick={() => {
+											setOpenPasswordModal(true);
+											setIsEditing(false);
+										}}
 									>
 										<ShieldCheck className="mr-2 h-4 w-4" />
 										Change Password

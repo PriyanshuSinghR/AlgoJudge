@@ -28,6 +28,13 @@ export const LANGUAGES = {
 	cpp: "C++",
 };
 
+export const DIFFICULTIES = {
+	all: "All Difficulties",
+	easy: "Easy",
+	medium: "Medium",
+	hard: "Hard",
+};
+
 export const CODE_EXAMPLES = {
 	javascript: `// Two Sum
 function twoSum(nums, target) {

@@ -11,6 +11,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, FileText, Lightbulb, ShieldCheck } from "lucide-react";
+import { DIFFICULTIES } from "@/lib/constant";
 
 export default function ProblemForm({
 	defaultValues,
@@ -88,20 +89,26 @@ export default function ProblemForm({
 							value={difficulty}
 							onValueChange={(value) => setValue("difficulty", value)}
 						>
-							<SelectTrigger className="!h-12 rounded-2xl border border-slate-200 bg-white px-4 dark:border-zinc-700 dark:bg-zinc-950">
-								<SelectValue placeholder="Select Difficulty" />
+							<SelectTrigger className="h-12 w-[180px] rounded-2xl border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+								<SelectValue>{DIFFICULTIES[difficulty]}</SelectValue>
 							</SelectTrigger>
 
-							<SelectContent className="rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-zinc-700 dark:bg-zinc-900">
-								<SelectItem className="rounded-xl px-3 py-2" value="easy">
-									Easy
-								</SelectItem>
-								<SelectItem className="rounded-xl px-3 py-2" value="medium">
-									Medium
-								</SelectItem>
-								<SelectItem className="rounded-xl px-3 py-2" value="hard">
-									Hard
-								</SelectItem>
+							<SelectContent
+								sideOffset={6}
+								align="center"
+								className="w-[190px] rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+							>
+								{Object.entries(DIFFICULTIES)
+									.filter(([key]) => key !== "all")
+									.map(([value, label]) => (
+										<SelectItem
+											key={value}
+											value={value}
+											className="rounded-xl px-3 py-2"
+										>
+											{label}
+										</SelectItem>
+									))}
 							</SelectContent>
 						</Select>
 

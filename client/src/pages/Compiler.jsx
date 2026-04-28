@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Code2, Play, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DEFAULT_CODE } from "@/lib/constant";
+import { DEFAULT_CODE, LANGUAGES } from "@/lib/constant";
 import { useRunProblem } from "@/hooks/useConsole";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -114,7 +114,7 @@ export default function CompilerPage() {
 					<div className="flex flex-wrap items-center gap-3">
 						<Select value={language} onValueChange={handleLanguageChange}>
 							<SelectTrigger className="!h-12 w-[190px] rounded-2xl border border-slate-200 bg-white px-5 text-sm font-medium shadow-none dark:border-zinc-700 dark:bg-zinc-900">
-								<SelectValue />
+								<SelectValue>{LANGUAGES[language]}</SelectValue>
 							</SelectTrigger>
 
 							<SelectContent
@@ -122,18 +122,15 @@ export default function CompilerPage() {
 								align="center"
 								className="w-[190px] rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-zinc-700 dark:bg-zinc-900"
 							>
-								<SelectItem className="rounded-xl px-3 py-2" value="javascript">
-									JavaScript
-								</SelectItem>
-								<SelectItem className="rounded-xl px-3 py-2" value="python">
-									Python
-								</SelectItem>
-								<SelectItem className="rounded-xl px-3 py-2" value="java">
-									Java
-								</SelectItem>
-								<SelectItem className="rounded-xl px-3 py-2" value="cpp">
-									C++
-								</SelectItem>
+								{Object.entries(LANGUAGES).map(([value, label]) => (
+									<SelectItem
+										key={value}
+										value={value}
+										className="rounded-xl px-3 py-2"
+									>
+										{label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 

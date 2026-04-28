@@ -12,15 +12,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DEFAULT_CODE } from "@/lib/constant";
+import { DEFAULT_CODE, LANGUAGES } from "@/lib/constant";
 import {
 	useRunProblem,
 	useSubmissionHistory,
@@ -31,6 +26,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle2, XCircle, Clock3, AlertTriangle } from "lucide-react";
+import { useExplainCode, useHint } from "@/hooks/useAI";
+import AIContent from "@/components/problems/AIContent";
 
 const MONACO_LANG = {
 	javascript: "javascript",
@@ -54,7 +51,20 @@ export default function SingleProblemPage() {
 	const { data: user } = useCurrentUser();
 	const { data: problem, isLoading } = useProblemBySlug(slug);
 	const { data: submissionHistory = [], isLoading: isSubmissionLoading } =
-		useSubmissionHistory(problem?._id);
+		useSubmissionHistory(problem?._id, user);
+
+	const { mutate: getHintAI, isPending: isGettingHint } = useHint();
+	const { mutate: explainAI, isPending: isExplaining } = useExplainCode();
+
+	const [activeMainTab, setActiveMainTab] = useState("io");
+	const [activeAiTab, setActiveAiTab] = useState("hint1");
+
+	const [hints, setHints] = useState({
+		hint1: "",
+		hint2: "",
+		hint3: "",
+		explain: "",
+	});
 
 	const [language, setLanguage] = useState(() => {
 		return localStorage.getItem("selected-lang") || "javascript";
@@ -156,6 +166,17 @@ export default function SingleProblemPage() {
 
 		previousUserRef.current = user;
 	}, [user]);
+
+	const hintOrder = ["hint1", "hint2", "hint3"];
+
+	const nextHintKey = hintOrder.find((h) => !hints[h]);
+	const allHintsDone = !nextHintKey;
+
+	const hintLevelMap = {
+		hint1: 1,
+		hint2: 2,
+		hint3: 3,
+	};
 	const handleCodeChange = (value) => {
 		setCodeMap((prev) => ({ ...prev, [language]: value ?? "" }));
 	};
@@ -291,6 +312,49 @@ ${result.error}`,
 					latestSubmissionForLang?.code || prev[lang] || DEFAULT_CODE[lang],
 			};
 		});
+	};
+
+	const handleGetHint = () => {
+		if (!nextHintKey) return;
+
+		setActiveMainTab("ai");
+		setActiveAiTab(nextHintKey);
+
+		getHintAI(
+			{
+				problemId: problem._id,
+				userCode: codeMap[language],
+				level: hintLevelMap[nextHintKey],
+			},
+			{
+				onSuccess: (res) => {
+					setHints((prev) => ({
+						...prev,
+						[nextHintKey]: res?.data?.data || "No hint generated",
+					}));
+				},
+			},
+		);
+	};
+
+	const handleExplain = () => {
+		setActiveMainTab("ai");
+		setActiveAiTab("explain");
+
+		explainAI(
+			{
+				code: codeMap[language],
+				language,
+			},
+			{
+				onSuccess: (res) => {
+					setHints((prev) => ({
+						...prev,
+						explain: res?.data?.data || "No explanation generated",
+					}));
+				},
+			},
+		);
 	};
 
 	if (isLoading) {
@@ -622,7 +686,7 @@ ${result.error}`,
 								<div className="relative flex flex-wrap items-center gap-3 border-b border-slate-100 p-5 dark:border-zinc-800">
 									<Select value={language} onValueChange={handleLanguageChange}>
 										<SelectTrigger className="!h-12 w-[190px] rounded-2xl border border-slate-200 bg-white px-5 text-sm font-medium shadow-none dark:border-zinc-700 dark:bg-zinc-900">
-											<SelectValue />
+											<SelectValue>{LANGUAGES[language]}</SelectValue>
 										</SelectTrigger>
 
 										<SelectContent
@@ -630,24 +694,15 @@ ${result.error}`,
 											align="center"
 											className="w-[190px] rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-zinc-700 dark:bg-zinc-900"
 										>
-											<SelectItem
-												className="rounded-xl px-3 py-2"
-												value="javascript"
-											>
-												JavaScript
-											</SelectItem>
-											<SelectItem
-												className="rounded-xl px-3 py-2"
-												value="python"
-											>
-												Python
-											</SelectItem>
-											<SelectItem className="rounded-xl px-3 py-2" value="java">
-												Java
-											</SelectItem>
-											<SelectItem className="rounded-xl px-3 py-2" value="cpp">
-												C++
-											</SelectItem>
+											{Object.entries(LANGUAGES).map(([value, label]) => (
+												<SelectItem
+													key={value}
+													value={value}
+													className="rounded-xl px-3 py-2"
+												>
+													{label}
+												</SelectItem>
+											))}
 										</SelectContent>
 									</Select>
 
@@ -698,6 +753,32 @@ ${result.error}`,
 												Signin to Submit
 											</Button>
 										)}
+
+										<Button
+											variant="outline"
+											onClick={handleGetHint}
+											disabled={isGettingHint || allHintsDone}
+											className="h-12 rounded-2xl border-amber-200 bg-amber-50 px-5 text-sm font-medium text-amber-600 hover:bg-amber-100"
+										>
+											{isGettingHint
+												? "Thinking..."
+												: allHintsDone
+													? "All Hints Used"
+													: nextHintKey === "hint1"
+														? "Hint 1 💡"
+														: nextHintKey === "hint2"
+															? "Hint 2 💡"
+															: "Hint 3 💡"}
+										</Button>
+
+										<Button
+											variant="outline"
+											onClick={handleExplain}
+											disabled={isExplaining}
+											className="h-12 rounded-2xl border-blue-200 bg-blue-50 px-5 text-sm font-medium text-blue-600 hover:bg-blue-100"
+										>
+											{isExplaining ? "Explaining..." : "Explain 🤖"}
+										</Button>
 									</div>
 								</div>
 
@@ -738,59 +819,300 @@ ${result.error}`,
 								</div>
 							</div>
 
-							<div className="grid gap-5 pb-1 xl:grid-cols-2">
-								<div className="overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-white/90 via-white/70 to-cyan-50/40  backdrop-blur-xl dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-cyan-950/10">
-									<div className="border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
-										<p className="text-sm font-semibold text-slate-900 dark:text-white">
-											Custom Input
-										</p>
+							<Tabs
+								value={activeMainTab}
+								onValueChange={setActiveMainTab}
+								className="mt-6"
+							>
+								<div className="overflow-hidden rounded-[32px] border border-white/70 bg-gradient-to-br from-white via-indigo-50/30 to-white shadow-[0_16px_50px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-zinc-950">
+									{/* Header Tabs */}
+									<div className="border-b border-slate-200/70 bg-white/60 px-3 pt-3 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50">
+										<TabsList className="flex w-full items-stretch gap-2 bg-transparent p-0">
+											<TabsTrigger
+												value="io"
+												className="group relative flex flex-1 items-center justify-center gap-2 rounded-t-2xl border border-transparent border-b-0 bg-transparent px-4 py-3 text-[13px] font-medium text-slate-500 transition-all data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-[0_-1px_0_rgba(255,255,255,0.7),0_8px_24px_rgba(15,23,42,0.06)] dark:data-[state=active]:border-zinc-700 dark:data-[state=active]:bg-zinc-900 dark:data-[state=active]:text-indigo-300"
+											>
+												<span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-[12px] transition group-data-[state=active]:bg-indigo-100 dark:bg-zinc-800 dark:group-data-[state=active]:bg-indigo-500/20">
+													⌨
+												</span>
+												<span>Input & Output</span>
+											</TabsTrigger>
+
+											<TabsTrigger
+												value="ai"
+												className="group relative flex flex-1 items-center justify-center gap-2 rounded-t-2xl border border-transparent border-b-0 bg-transparent px-4 py-3 text-[13px] font-medium text-slate-500 transition-all data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-[0_-1px_0_rgba(255,255,255,0.7),0_8px_24px_rgba(15,23,42,0.06)] dark:data-[state=active]:border-zinc-700 dark:data-[state=active]:bg-zinc-900 dark:data-[state=active]:text-indigo-300"
+											>
+												<span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-[12px] transition group-data-[state=active]:bg-indigo-100 dark:bg-zinc-800 dark:group-data-[state=active]:bg-indigo-500/20">
+													✦
+												</span>
+												<span>AI Assistant</span>
+											</TabsTrigger>
+										</TabsList>
 									</div>
 
-									<div className="p-0">
-										<Textarea
-											value={input}
-											onChange={(e) => setInput(e.target.value)}
-											placeholder="Enter your custom input here..."
-											className="h-[230px] w-full resize-none rounded-b-2xl rounded-t-none border-0 border-t border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-zinc-700 dark:bg-zinc-950"
-										/>
-									</div>
-								</div>
+									{/* Body */}
+									<div className="p-4 sm:p-5">
+										<TabsContent value="io" className="mt-0">
+											<div className="grid gap-4 xl:grid-cols-2">
+												{/* Input */}
+												<div className="overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/85 shadow-sm backdrop-blur-sm transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/70">
+													<div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3 dark:border-zinc-800 sm:px-5">
+														<div>
+															<p className="text-sm font-semibold text-slate-900 dark:text-white">
+																Custom Input
+															</p>
+															<p className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
+																Enter stdin for your program
+															</p>
+														</div>
+													</div>
 
-								<div className="overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-white/90 via-white/70 to-violet-50/40  backdrop-blur-xl dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-violet-950/10">
-									<div className="border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
-										<div className="flex items-center justify-between">
-											<p className="text-sm font-semibold text-slate-900 dark:text-white">
-												Output
-											</p>
+													<div className="p-0">
+														<Textarea
+															value={input}
+															onChange={(e) => setInput(e.target.value)}
+															placeholder="Enter your custom input here..."
+															className="h-[220px] resize-none rounded-none border-0 bg-transparent px-4 py-4 font-mono text-xs leading-6 shadow-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 sm:px-5"
+														/>
+													</div>
+												</div>
 
-											{runStatus && (
-												<div
-													className={cn(
-														"rounded-full px-3 py-1 text-[11px] font-medium",
-														runStatus === "Accepted" ||
-															runStatus === "Run Successful"
-															? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-300"
-															: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300",
-													)}
-												>
-													{runStatus}
+												{/* Output */}
+												<div className="overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/85 shadow-sm backdrop-blur-sm transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/70">
+													<div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3 dark:border-zinc-800 sm:px-5">
+														<div>
+															<p className="text-sm font-semibold text-slate-900 dark:text-white">
+																Output
+															</p>
+															<p className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
+																Program output and run status
+															</p>
+														</div>
+
+														{runStatus && (
+															<span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+																{runStatus}
+															</span>
+														)}
+													</div>
+
+													<div
+														className={cn(
+															"h-[220px] overflow-y-auto bg-slate-50/80 px-4 py-4 font-mono text-xs leading-6 whitespace-pre-wrap dark:bg-zinc-950 sm:px-5",
+															outputColor,
+														)}
+													>
+														{output || "Run your code to see output here"}
+													</div>
+												</div>
+											</div>
+										</TabsContent>
+										<TabsContent value="ai" className="mt-0">
+											{!user ? (
+												<div className="flex h-[320px] flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white/70 p-6 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
+													<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+														✨
+													</div>
+
+													<p className="text-base font-semibold text-slate-900 dark:text-white">
+														Signin to use AI Assistant
+													</p>
+
+													<p className="mt-2 max-w-[260px] text-sm leading-6 text-slate-500 dark:text-zinc-400">
+														Get step-by-step hints, explanations, and AI-powered
+														guidance for solving this problem.
+													</p>
+
+													<Button
+														onClick={() =>
+															navigate(
+																`/signin?redirect=${encodeURIComponent(location.pathname)}`,
+															)
+														}
+														className="mt-6 h-11 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 text-sm font-medium text-white"
+													>
+														Signin
+													</Button>
+												</div>
+											) : (
+												<div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-violet-50/20 to-white shadow-sm dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-950">
+													<div className="flex flex-col gap-4 border-b border-slate-200/70 px-4 py-4 dark:border-zinc-800 sm:px-5 sm:py-5 md:flex-row md:items-center md:justify-between">
+														<div className="flex items-center gap-3">
+															<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-indigo-500/20">
+																✦
+															</div>
+
+															<div>
+																<p className="text-sm font-semibold text-slate-900 dark:text-white">
+																	AI Assistant
+																</p>
+																<p className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">
+																	Personalized hints & explanations
+																</p>
+															</div>
+														</div>
+
+														<div className="flex flex-wrap gap-2">
+															{activeAiTab !== "explain" && (
+																<Button
+																	size="sm"
+																	onClick={handleGetHint}
+																	disabled={isGettingHint || !!hints.hint3}
+																	className="h-9 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 px-4 text-xs font-medium text-white shadow-sm shadow-indigo-500/20 hover:opacity-95 flex items-center gap-2"
+																>
+																	{isGettingHint ? (
+																		<>
+																			<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+																			Thinking...
+																		</>
+																	) : hints.hint1 ? (
+																		hints.hint2 ? (
+																			hints.hint3 ? (
+																				"All Hints Done"
+																			) : (
+																				"Get Hint 3"
+																			)
+																		) : (
+																			"Get Hint 2"
+																		)
+																	) : (
+																		"Get Hint 1"
+																	)}
+																</Button>
+															)}
+
+															{/* SHOW EXPLAIN BUTTON ONLY IF USER IS IN EXPLAIN TAB */}
+															{activeAiTab === "explain" && (
+																<Button
+																	size="sm"
+																	variant="outline"
+																	onClick={handleExplain}
+																	disabled={isExplaining}
+																	className="h-9 rounded-xl border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 flex items-center gap-2"
+																>
+																	{isExplaining ? (
+																		<>
+																			<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400/40 border-t-slate-700 dark:border-zinc-500/40 dark:border-t-white" />
+																			Thinking...
+																		</>
+																	) : hints.explain ? (
+																		"Re-Explain"
+																	) : (
+																		"Explain"
+																	)}
+																</Button>
+															)}
+														</div>
+													</div>
+
+													<Tabs
+														value={activeAiTab}
+														onValueChange={setActiveAiTab}
+													>
+														<div className="px-4 pt-4 sm:px-5">
+															<TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
+																{[
+																	{ key: "hint1", num: 1, unlocked: true },
+																	{
+																		key: "hint2",
+																		num: 2,
+																		unlocked: !!hints.hint1,
+																	},
+																	{
+																		key: "hint3",
+																		num: 3,
+																		unlocked: !!hints.hint2,
+																	},
+																	{
+																		key: "explain",
+																		label: "Explain",
+																		unlocked: true,
+																	},
+																].map((tab) => (
+																	<TabsTrigger
+																		key={tab.key}
+																		value={tab.key}
+																		disabled={!tab.unlocked}
+																		className="group flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-2 text-xs font-medium text-slate-500 shadow-sm transition-all data-[state=active]:border-indigo-200 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:data-[state=active]:border-indigo-500/30 dark:data-[state=active]:bg-indigo-500"
+																	>
+																		{tab.num ? (
+																			<span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 transition group-data-[state=active]:bg-white group-data-[state=active]:text-indigo-600 dark:bg-zinc-800 dark:text-zinc-300 dark:group-data-[state=active]:bg-white dark:group-data-[state=active]:text-indigo-600">
+																				{tab.num}
+																			</span>
+																		) : null}
+																		{tab.label || `Hint ${tab.num}`}
+																	</TabsTrigger>
+																))}
+															</TabsList>
+														</div>
+
+														<div className="px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+															{["hint1", "hint2", "hint3", "explain"].map(
+																(key) => (
+																	<TabsContent
+																		key={key}
+																		value={key}
+																		className="mt-0"
+																	>
+																		{!hints[key] ? (
+																			<div className="flex min-h-[160px] items-center justify-center rounded-[22px] border border-dashed border-slate-200 bg-white/70 px-6 py-10 text-center text-sm text-slate-500 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400">
+																				<div>
+																					<p className="font-medium text-slate-700 dark:text-zinc-200">
+																						{key === "explain"
+																							? "Click Explain to analyze your code"
+																							: "Unlock hints step by step"}
+																					</p>
+																					<p className="mt-1 text-xs text-slate-400 dark:text-zinc-500">
+																						Each hint becomes available only
+																						after the previous one is used.
+																					</p>
+																				</div>
+																			</div>
+																		) : (
+																			<div className="space-y-3">
+																				<AIContent content={hints[key]} />
+
+																				{key !== "explain" && (
+																					<div className="flex flex-wrap gap-2">
+																						{["Hint 1", "Hint 2", "Hint 3"].map(
+																							(label, i) => {
+																								const unlocked =
+																									i === 0
+																										? !!hints.hint1
+																										: i === 1
+																											? !!hints.hint2
+																											: !!hints.hint3;
+
+																								return (
+																									<span
+																										key={label}
+																										className={`rounded-full border px-3 py-1 text-[10px] font-bold ${
+																											unlocked
+																												? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+																												: "border-slate-200 bg-slate-50 text-slate-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500"
+																										}`}
+																									>
+																										{label}{" "}
+																										{unlocked ? "✓" : "🔒"}
+																									</span>
+																								);
+																							},
+																						)}
+																					</div>
+																				)}
+																			</div>
+																		)}
+																	</TabsContent>
+																),
+															)}
+														</div>
+													</Tabs>
 												</div>
 											)}
-										</div>
-									</div>
-
-									<div className="p-0">
-										<div
-											className={cn(
-												"h-[230px] overflow-y-auto  rounded-b-2xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre-wrap dark:border-zinc-700 dark:bg-zinc-950",
-												outputColor,
-											)}
-										>
-											{output || "Run your code to see output here"}
-										</div>
+										</TabsContent>
 									</div>
 								</div>
-							</div>
+							</Tabs>
 						</div>
 					</div>
 				</div>
