@@ -824,28 +824,30 @@ ${result.error}`,
 								onValueChange={setActiveMainTab}
 								className="mt-6"
 							>
-								<div className="overflow-hidden rounded-[32px] border border-white/70 bg-gradient-to-br from-white via-indigo-50/30 to-white shadow-[0_16px_50px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-zinc-950">
+								<div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.04)] dark:border-zinc-800 dark:bg-zinc-950">
 									{/* Header Tabs */}
-									<div className="border-b border-slate-200/70 bg-white/60 px-3 pt-3 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/50">
-										<TabsList className="flex w-full items-stretch gap-2 bg-transparent p-0">
+									<div className="border-b border-slate-200/70 bg-white/70 pb-0 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/60">
+										<TabsList className="!flex !w-full !h-[58px] !items-stretch !gap-2 !rounded-none !bg-slate-100/70 !p-2 dark:!bg-zinc-900/70">
 											<TabsTrigger
 												value="io"
-												className="group relative flex flex-1 items-center justify-center gap-2 rounded-t-2xl border border-transparent border-b-0 bg-transparent px-4 py-3 text-[13px] font-medium text-slate-500 transition-all data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-[0_-1px_0_rgba(255,255,255,0.7),0_8px_24px_rgba(15,23,42,0.06)] dark:data-[state=active]:border-zinc-700 dark:data-[state=active]:bg-zinc-900 dark:data-[state=active]:text-indigo-300"
+												className="group !flex !h-full flex-1 items-center justify-center gap-3 !rounded-none !rounded-tl-[18px] !border-0 !px-6 !py-0 text-[14px] font-semibold text-slate-500 transition-all duration-200 ease-out hover:text-indigo-500 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-950 dark:data-[state=active]:text-indigo-300"
 											>
-												<span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-[12px] transition group-data-[state=active]:bg-indigo-100 dark:bg-zinc-800 dark:group-data-[state=active]:bg-indigo-500/20">
+												<span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-[15px] transition-all group-data-[state=active]:scale-105 group-data-[state=active]:bg-indigo-100 dark:bg-zinc-800 dark:group-data-[state=active]:bg-indigo-500/20">
 													⌨
 												</span>
-												<span>Input & Output</span>
+												<span className="tracking-wide">
+													Input &amp; Output
+												</span>
 											</TabsTrigger>
 
 											<TabsTrigger
 												value="ai"
-												className="group relative flex flex-1 items-center justify-center gap-2 rounded-t-2xl border border-transparent border-b-0 bg-transparent px-4 py-3 text-[13px] font-medium text-slate-500 transition-all data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-[0_-1px_0_rgba(255,255,255,0.7),0_8px_24px_rgba(15,23,42,0.06)] dark:data-[state=active]:border-zinc-700 dark:data-[state=active]:bg-zinc-900 dark:data-[state=active]:text-indigo-300"
+												className="group !flex !h-full flex-1 items-center justify-center gap-3 !rounded-none !rounded-tr-[18px] !border-0 !px-6 !py-0 text-[14px] font-semibold text-slate-500 transition-all duration-200 ease-out hover:text-indigo-500 data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-950 dark:data-[state=active]:text-indigo-300"
 											>
-												<span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-[12px] transition group-data-[state=active]:bg-indigo-100 dark:bg-zinc-800 dark:group-data-[state=active]:bg-indigo-500/20">
+												<span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-[15px] transition-all group-data-[state=active]:scale-105 group-data-[state=active]:bg-indigo-100 dark:bg-zinc-800 dark:group-data-[state=active]:bg-indigo-500/20">
 													✦
 												</span>
-												<span>AI Assistant</span>
+												<span className="tracking-wide">AI Assistant</span>
 											</TabsTrigger>
 										</TabsList>
 									</div>
