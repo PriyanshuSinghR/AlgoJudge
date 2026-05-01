@@ -17,8 +17,29 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            echo "🚀 Starting deployment..."
+
             cd ~/AlgoJudge
+
+            echo "📥 Pulling latest code..."
             git pull
+
+            echo "📂 Going to server..."
             cd server
+
+            echo "🛑 Stopping old containers..."
             docker compose down
+
+            echo "🔨 Building and starting new containers..."
             docker compose up -d --build
+
+            echo "📦 Running containers:"
+            docker ps
+
+            echo "📜 Last 20 logs:"
+            docker logs --tail 20 algojudge-backend
+
+            echo "🌐 Health check:"
+            curl -s http://localhost:8000 || echo "Health check failed"
+
+            echo "✅ Deployment finished"
