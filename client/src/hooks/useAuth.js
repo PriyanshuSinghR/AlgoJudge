@@ -32,17 +32,15 @@ export const useSignUp = () => {
 };
 
 export const useCurrentUser = () => {
+	const token = localStorage.getItem("token");
+
 	return useQuery({
 		queryKey: ["auth"],
 		queryFn: async () => {
-			try {
-				const res = await getCurrentUser();
-				return res.data.user ?? null;
-			} catch (error) {
-				console.error("Error fetching current user:", error);
-				return null;
-			}
+			const res = await getCurrentUser();
+			return res.data.user ?? null;
 		},
+		enabled: !!token, // 🔥 prevents useless calls
 		retry: false,
 		staleTime: Infinity,
 		gcTime: Infinity,

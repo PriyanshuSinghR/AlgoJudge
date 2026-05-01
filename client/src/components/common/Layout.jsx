@@ -5,7 +5,9 @@ import { Navbar } from "./Navbar";
 export default function Layout({ children, permission }) {
 	const { data: user, isLoading } = useCurrentUser();
 
-	if (isLoading) return null;
+	if (isLoading) {
+		return <div>Loading...</div>;
+	}
 
 	if (permission === "guest" && user) return <Navigate to="/" replace />;
 	if (permission === "protected" && !user)
