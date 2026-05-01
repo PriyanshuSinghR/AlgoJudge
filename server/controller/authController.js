@@ -3,8 +3,7 @@ import jwt from "jsonwebtoken";
 import AuthUser from "../model/authUser.js";
 
 /**
- * Signup a new user
- * @route POST /signup
+ * Signup
  */
 const signup = async (req, res) => {
 	try {
@@ -13,21 +12,22 @@ const signup = async (req, res) => {
 		if (!(name && email && password)) {
 			return res.status(400).json({
 				success: false,
-				message:
-					"Please provide all required information: name, email, and password",
+				message: "Please provide name, email, and password",
 			});
 		}
 
-		const existingUser = await AuthUser.findOne({ email: email.toLowerCase() });
+		const existingUser = await AuthUser.findOne({
+			email: email.toLowerCase(),
+		});
+
 		if (existingUser) {
 			return res.status(409).json({
 				success: false,
-				message: "User with this email already exists",
+				message: "User already exists",
 			});
 		}
 
-		const saltRounds = 12;
-		const hashedPassword = await bcrypt.hash(password, saltRounds);
+		const hashedPassword = await bcrypt.hash(password, 12);
 
 		const user = await AuthUser.create({
 			name: name.trim(),
@@ -36,60 +36,31 @@ const signup = async (req, res) => {
 		});
 
 		const token = jwt.sign(
-			{
-				id: user._id,
-				email: user.email,
-			},
+			{ id: user._id, email: user.email },
 			process.env.JWT_SECRET,
-			{
-				expiresIn: "24h",
-			},
+			{ expiresIn: "24h" },
 		);
-
-		const userResponse = {
-			_id: user._id,
-			name: user.name,
-			email: user.email,
-			createdAt: user.createdAt,
-		};
 
 		res.status(201).json({
 			success: true,
 			message: "User registered successfully!",
-			user: userResponse,
-			token: token,
+			user: {
+				_id: user._id,
+				name: user.name,
+				email: user.email,
+			},
+			token,
 		});
 	} catch (error) {
-		console.error("Registration error:", error);
-
-		if (error.name === "ValidationError") {
-			const validationErrors = Object.values(error.errors).map(
-				(err) => err.message,
-			);
-			return res.status(400).json({
-				success: false,
-				message: "Validation failed",
-				errors: validationErrors,
-			});
-		}
-
-		if (error.code === 11000) {
-			return res.status(409).json({
-				success: false,
-				message: "User with this email already exists",
-			});
-		}
-
 		res.status(500).json({
 			success: false,
-			message: "Internal server error during registration",
+			message: "Internal server error",
 		});
 	}
 };
 
 /**
- * Signin user
- * @route POST /signin
+ * Signin
  */
 const signin = async (req, res) => {
 	try {
@@ -98,139 +69,91 @@ const signin = async (req, res) => {
 		if (!(email && password)) {
 			return res.status(400).json({
 				success: false,
-				message: "Please provide both email and password",
+				message: "Email & password required",
 			});
 		}
 
-		const user = await AuthUser.findOne({ email: email.toLowerCase() });
+		const user = await AuthUser.findOne({
+			email: email.toLowerCase(),
+		});
+
 		if (!user) {
 			return res.status(401).json({
 				success: false,
-				message: "Invalid email or password",
+				message: "Invalid credentials",
 			});
 		}
 
-		const isPasswordValid = await bcrypt.compare(password, user.password);
-		if (!isPasswordValid) {
+		const isValid = await bcrypt.compare(password, user.password);
+
+		if (!isValid) {
 			return res.status(401).json({
 				success: false,
-				message: "Invalid email or password",
+				message: "Invalid credentials",
 			});
 		}
 
 		const token = jwt.sign(
-			{
-				id: user._id,
-				email: user.email,
-			},
+			{ id: user._id, email: user.email },
 			process.env.JWT_SECRET,
-			{
-				expiresIn: "24h",
-			},
+			{ expiresIn: "24h" },
 		);
 
-		const cookieOptions = {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "strict",
-			maxAge: 24 * 60 * 60 * 1000,
-		};
-
-		const userResponse = {
-			_id: user._id,
-			name: user.name,
-			email: user.email,
-		};
-
-		res.status(200).cookie("token", token, cookieOptions).json({
+		res.status(200).json({
 			success: true,
 			message: "Login successful!",
-			user: userResponse,
-			token: token,
+			user: {
+				_id: user._id,
+				name: user.name,
+				email: user.email,
+			},
+			token,
 		});
 	} catch (error) {
-		console.error("Login error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Internal server error during login",
+			message: "Internal server error",
 		});
 	}
 };
 
+/**
+ * Signout
+ */
 const signout = async (req, res) => {
-	try {
-		res.clearCookie("token", {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "strict",
-		});
-
-		res.status(200).json({
-			success: true,
-			message: "Logged out successfully",
-		});
-	} catch (error) {
-		console.error("Logout error:", error);
-
-		res.status(500).json({
-			success: false,
-			message: "Internal server error during logout",
-		});
-	}
+	return res.status(200).json({
+		success: true,
+		message: "Logged out successfully",
+	});
 };
 
+/**
+ * Get current user
+ */
 const getCurrentUser = async (req, res) => {
-	try {
-		const token = req.cookies.token;
-
-		if (!token) {
-			return res.status(401).json({
-				success: false,
-				message: "Not authenticated",
-			});
-		}
-
-		const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-		const user = await AuthUser.findById(decoded.id).select("-password");
-
-		res.status(200).json({
-			success: true,
-			user,
-		});
-	} catch (error) {
-		return res.status(401).json({
-			success: false,
-			message: "Invalid token",
-		});
-	}
+	res.status(200).json({
+		success: true,
+		user: req.user,
+	});
 };
 
+/**
+ * Update profile
+ */
 const updateCurrentUser = async (req, res) => {
 	try {
-		const token = req.cookies.token;
-
-		if (!token) {
-			return res.status(401).json({
-				success: false,
-				message: "Not authenticated",
-			});
-		}
-
-		const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
 		const { name, email } = req.body;
 
 		if (!name || !email) {
 			return res.status(400).json({
 				success: false,
-				message: "Name and email are required",
+				message: "Name & email required",
 			});
 		}
 
 		const existingUser = await AuthUser.findOne({
 			email: email.toLowerCase(),
-			_id: { $ne: decoded.id },
+			_id: { $ne: req.user._id },
 		});
 
 		if (existingUser) {
@@ -240,44 +163,33 @@ const updateCurrentUser = async (req, res) => {
 			});
 		}
 
-		const user = await AuthUser.findByIdAndUpdate(
-			decoded.id,
+		const updatedUser = await AuthUser.findByIdAndUpdate(
+			req.user._id,
 			{
 				name: name.trim(),
 				email: email.toLowerCase().trim(),
 			},
-			{
-				new: true,
-				runValidators: true,
-			},
+			{ new: true },
 		).select("-password");
 
-		return res.status(200).json({
+		res.status(200).json({
 			success: true,
-			message: "Profile updated successfully",
-			user,
+			message: "Profile updated",
+			user: updatedUser,
 		});
 	} catch (error) {
-		return res.status(500).json({
+		res.status(500).json({
 			success: false,
-			message: error.toString(),
+			message: "Error updating profile",
 		});
 	}
 };
 
+/**
+ * Change password
+ */
 const changePassword = async (req, res) => {
 	try {
-		const token = req.cookies.token;
-
-		if (!token) {
-			return res.status(401).json({
-				success: false,
-				message: "Not authenticated",
-			});
-		}
-
-		const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
 		const { newPassword } = req.body;
 
 		if (!newPassword || newPassword.length < 6) {
@@ -289,18 +201,18 @@ const changePassword = async (req, res) => {
 
 		const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-		await AuthUser.findByIdAndUpdate(decoded.id, {
+		await AuthUser.findByIdAndUpdate(req.user._id, {
 			password: hashedPassword,
 		});
 
-		return res.status(200).json({
+		res.status(200).json({
 			success: true,
 			message: "Password updated successfully",
 		});
 	} catch (error) {
-		return res.status(500).json({
+		res.status(500).json({
 			success: false,
-			message: error.toString(),
+			message: "Error updating password",
 		});
 	}
 };

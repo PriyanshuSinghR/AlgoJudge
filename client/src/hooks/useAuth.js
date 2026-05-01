@@ -13,7 +13,8 @@ export const useSignIn = () => {
 
 	return useMutation({
 		mutationFn: signin,
-		onSuccess: () => {
+		onSuccess: (res) => {
+			localStorage.setItem("token", res.data.token);
 			queryClient.invalidateQueries({ queryKey: ["auth"] });
 		},
 	});
@@ -56,6 +57,7 @@ export const useSignOut = () => {
 	return useMutation({
 		mutationFn: signout,
 		onSuccess: () => {
+			localStorage.removeItem("token");
 			Object.keys(localStorage).forEach((key) => {
 				if (key.startsWith("code-")) {
 					localStorage.removeItem(key);
