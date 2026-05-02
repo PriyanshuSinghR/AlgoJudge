@@ -30,11 +30,19 @@ export function Navbar() {
 				<div className="flex w-full items-center justify-between gap-4">
 					<div className="min-w-[220px] flex items-center">
 						<Link to="/" className="group flex items-center gap-3">
-							<div>
+							{/* Logo Image */}
+							<img
+								src="/tablogo.png"
+								alt="Algo Judge Logo"
+								className="h-11 w-11 object-contain transition-transform duration-300 group-hover:scale-105"
+							/>
+
+							{/* Text */}
+							<div className="flex flex-col leading-tight">
 								<h1 className="text-base font-black tracking-tight bg-gradient-to-r from-slate-900 via-indigo-700 to-violet-700 bg-clip-text text-transparent dark:from-white dark:via-indigo-300 dark:to-violet-400">
 									Algo Judge
 								</h1>
-								<p className="text-[11px] font-medium uppercase tracking-[0.25em] text-slate-400 dark:text-zinc-500">
+								<p className="text-[10px] font-medium uppercase tracking-[0.25em] text-slate-400 dark:text-zinc-500">
 									Code • Solve • Win
 								</p>
 							</div>
