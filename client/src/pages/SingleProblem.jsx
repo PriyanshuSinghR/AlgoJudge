@@ -753,32 +753,35 @@ ${result.error}`,
 												Signin to Submit
 											</Button>
 										)}
+										{user && (
+											<>
+												<Button
+													variant="outline"
+													onClick={handleGetHint}
+													disabled={isGettingHint || allHintsDone}
+													className="h-12 rounded-2xl border-amber-200 bg-amber-50 px-5 text-sm font-medium text-amber-600 hover:bg-amber-100"
+												>
+													{isGettingHint
+														? "Thinking..."
+														: allHintsDone
+															? "All Hints Used"
+															: nextHintKey === "hint1"
+																? "Hint 1 💡"
+																: nextHintKey === "hint2"
+																	? "Hint 2 💡"
+																	: "Hint 3 💡"}
+												</Button>
 
-										<Button
-											variant="outline"
-											onClick={handleGetHint}
-											disabled={isGettingHint || allHintsDone}
-											className="h-12 rounded-2xl border-amber-200 bg-amber-50 px-5 text-sm font-medium text-amber-600 hover:bg-amber-100"
-										>
-											{isGettingHint
-												? "Thinking..."
-												: allHintsDone
-													? "All Hints Used"
-													: nextHintKey === "hint1"
-														? "Hint 1 💡"
-														: nextHintKey === "hint2"
-															? "Hint 2 💡"
-															: "Hint 3 💡"}
-										</Button>
-
-										<Button
-											variant="outline"
-											onClick={handleExplain}
-											disabled={isExplaining}
-											className="h-12 rounded-2xl border-blue-200 bg-blue-50 px-5 text-sm font-medium text-blue-600 hover:bg-blue-100"
-										>
-											{isExplaining ? "Explaining..." : "Explain 🤖"}
-										</Button>
+												<Button
+													variant="outline"
+													onClick={handleExplain}
+													disabled={isExplaining}
+													className="h-12 rounded-2xl border-blue-200 bg-blue-50 px-5 text-sm font-medium text-blue-600 hover:bg-blue-100"
+												>
+													{isExplaining ? "Explaining..." : "Explain 🤖"}
+												</Button>
+											</>
+										)}
 									</div>
 								</div>
 
