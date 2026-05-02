@@ -61,6 +61,24 @@ export default function SignInPage() {
 		});
 	};
 
+	const handleGuestLogin = () => {
+		signIn(
+			{
+				email: "guest@gmail.com",
+				password: "Guest@123",
+			},
+			{
+				onSuccess: () => {
+					toast.success("Logged in as Guest");
+					navigate(redirectPath);
+				},
+				onError: () => {
+					toast.error("Guest login failed");
+				},
+			},
+		);
+	};
+
 	return (
 		<div className="relative flex min-h-[calc(100vh-150px)] overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white shadow-[0_20px_80px_-20px_rgba(0,0,0,0.18)] dark:border-zinc-800 dark:bg-zinc-900">
 			<div className="hidden w-[42%] flex-col justify-between overflow-hidden bg-[#0a0a0f] px-11 py-10 lg:flex">
@@ -179,18 +197,28 @@ export default function SignInPage() {
 							)}
 						</div>
 
-						<Button
-							type="submit"
-							disabled={isPending}
-							className="group relative h-[50px] w-full overflow-hidden rounded-[10px] bg-zinc-950 font-semibold tracking-[0.04em] text-white shadow-[0_4px_20px_rgba(10,10,15,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(99,102,241,0.35)] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900"
-						>
-							<div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-pink-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+						<div className="mt-4 space-y-3">
+							<Button
+								type="submit"
+								disabled={isPending}
+								className="group relative h-[50px] w-full overflow-hidden rounded-[10px] bg-zinc-950 font-semibold tracking-[0.04em] text-white shadow-[0_4px_20px_rgba(10,10,15,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(99,102,241,0.35)] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900"
+							>
+								<div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-pink-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+								<span className="relative z-10 flex items-center justify-center gap-2">
+									<LogIn className="h-4 w-4" />
+									{isPending ? "Signing in..." : "Sign In"}
+								</span>
+							</Button>
 
-							<span className="relative z-10 flex items-center justify-center gap-2">
-								<LogIn className="h-4 w-4" />
-								{isPending ? "Signing in..." : "Sign In"}
-							</span>
-						</Button>
+							<Button
+								type="button"
+								onClick={handleGuestLogin}
+								disabled={isPending}
+								className="h-[50px] w-full rounded-[10px] border border-indigo-500/30 bg-indigo-500/10 font-semibold text-indigo-600 transition hover:bg-indigo-500/20 dark:text-indigo-400"
+							>
+								Continue as Guest
+							</Button>
+						</div>
 					</form>
 
 					<div className="my-5 flex items-center gap-3">

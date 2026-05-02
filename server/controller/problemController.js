@@ -151,3 +151,59 @@ export const deleteProblem = async (req, res) => {
 		});
 	}
 };
+
+export const bulkCreateProblems = async (req, res) => {
+	try {
+		const problems = req.body.problems;
+
+		if (!Array.isArray(problems) || problems.length === 0) {
+			return res.status(400).json({
+				success: false,
+				message: "Problems array is required",
+			});
+		}
+
+		const slugify = (text) =>
+			text
+				.toLowerCase()
+				.trim()
+				.replace(/ /g, "-")
+				.replace(/[^\w-]+/g, "");
+
+		const formattedProblems = problems.map((p) => {
+			if (!p.title || !p.description) {
+				throw new Error("Title and description required");
+			}
+
+			if (!p.examples || p.examples.length < 2) {
+				throw new Error(`${p.title} must have at least 2 examples`);
+			}
+
+			if (!p.testCases || p.testCases.length < 5) {
+				throw new Error(`${p.title} must have at least 5 test cases`);
+			}
+
+			return {
+				...p,
+				slug: slugify(p.title),
+				createdBy: req.user._id,
+			};
+		});
+
+		const createdProblems = await Problem.insertMany(formattedProblems, {
+			ordered: false,
+		});
+
+		res.status(201).json({
+			success: true,
+			count: createdProblems.length,
+			data: createdProblems,
+		});
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			success: false,
+			message: error.message || "Bulk insert failed",
+		});
+	}
+};

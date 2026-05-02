@@ -25,7 +25,8 @@ export const useSignUp = () => {
 
 	return useMutation({
 		mutationFn: signup,
-		onSuccess: () => {
+		onSuccess: (res) => {
+			localStorage.setItem("token", res.data.token);
 			queryClient.invalidateQueries({ queryKey: ["auth"] });
 		},
 	});
@@ -41,8 +42,11 @@ export const useCurrentUser = () => {
 				const res = await getCurrentUser();
 				return res.data.user ?? null;
 			} catch (error) {
-				console.error("Error fetching current user:", error);
-				return null;
+				if (error.response?.status === 401) {
+					localStorage.removeItem("token");
+					return null;
+				}
+				throw error;
 			}
 		},
 		enabled: !!token,

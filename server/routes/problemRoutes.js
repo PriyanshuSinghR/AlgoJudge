@@ -6,6 +6,7 @@ import {
 	updateProblem,
 	deleteProblem,
 	getProblemById,
+	bulkCreateProblems,
 } from "../controller/problemController.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
@@ -20,5 +21,6 @@ router.get("/id/:id", getProblemById);
 router.post("/", requireAuth, createProblem);
 router.put("/:id", requireAuth, updateProblem);
 router.delete("/:id", requireAuth, deleteProblem);
+router.post("/bulk", requireAuth, bulkCreateProblems);
 
 export default router;
