@@ -37,10 +37,15 @@ export const useCurrentUser = () => {
 	return useQuery({
 		queryKey: ["auth"],
 		queryFn: async () => {
-			const res = await getCurrentUser();
-			return res.data.user ?? null;
+			try {
+				const res = await getCurrentUser();
+				return res.data.user ?? null;
+			} catch (error) {
+				console.error("Error fetching current user:", error);
+				return null;
+			}
 		},
-		enabled: !!token, // 🔥 prevents useless calls
+		enabled: !!token,
 		retry: false,
 		staleTime: Infinity,
 		gcTime: Infinity,
