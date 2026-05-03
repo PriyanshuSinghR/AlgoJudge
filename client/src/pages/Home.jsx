@@ -178,7 +178,7 @@ export default function HomePage() {
 												inherit: true,
 												rules: [],
 												colors: {
-													"editor.background": "#020617", // slate-950
+													"editor.background": "#020617",
 													"editor.lineHighlightBackground": "#00000000",
 													"editorGutter.background": "#020617",
 													"minimap.background": "#020617",
@@ -186,7 +186,7 @@ export default function HomePage() {
 													"editorOverviewRuler.background": "#020617",
 												},
 											});
-										}} // ← register it before render
+										}}
 										language={selectedLanguage}
 										value={CODE_EXAMPLES[selectedLanguage]}
 										options={{
@@ -203,8 +203,10 @@ export default function HomePage() {
 											hideCursorInOverviewRuler: true,
 											overviewRulerBorder: false,
 											scrollbar: {
-												verticalScrollbarSize: 6,
-												horizontalScrollbarSize: 6,
+												verticalScrollbarSize: 10,
+												horizontalScrollbarSize: 10,
+												alwaysConsumeMouseWheel: false,
+												useShadows: false,
 											},
 										}}
 									/>
