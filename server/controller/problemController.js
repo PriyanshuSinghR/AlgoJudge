@@ -3,7 +3,7 @@ import Problem from "../model/problem.js";
 export const getProblems = async (req, res) => {
 	try {
 		const problems = await Problem.find().select(
-			"title difficulty tags slug createdBy",
+			"title difficulty tags slug createdBy -_id",
 		);
 
 		res.json({
@@ -22,7 +22,7 @@ export const getProblemBySlug = async (req, res) => {
 	try {
 		const problem = await Problem.findOne({
 			slug: req.params.slug,
-		});
+		}).select("-testCases");
 
 		if (!problem) {
 			return res.status(404).json({
@@ -45,7 +45,7 @@ export const getProblemBySlug = async (req, res) => {
 
 export const getProblemById = async (req, res) => {
 	try {
-		const problem = await Problem.findById(req.params.id);
+		const problem = await Problem.findById(req.params.id).select("-testCases");
 
 		if (!problem) {
 			return res.status(404).json({

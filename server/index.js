@@ -7,6 +7,8 @@ import aiRoutes from "./routes/aiRoutes.js";
 import DBConnection from "./database/db.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import { encryptMiddleware } from "./middleware/encryptMiddleware.js";
+import { decryptMiddleware } from "./middleware/decryptMiddleware.js";
 
 // Load environment variables
 dotenv.config();
@@ -38,6 +40,8 @@ app.use(cookieParser());
 // Database connection
 DBConnection();
 
+app.use(decryptMiddleware);
+
 // Routes
 app.get("/", (req, res) => {
 	res.status(200).json({
@@ -46,10 +50,10 @@ app.get("/", (req, res) => {
 		timestamp: new Date().toISOString(),
 	});
 });
-app.use("/auth", authRoutes);
-app.use("/problems", problemRoutes);
-app.use("/compiler", compilerRoutes);
-app.use("/ai", aiRoutes);
+app.use("/auth", encryptMiddleware, authRoutes);
+app.use("/problems", encryptMiddleware, problemRoutes);
+app.use("/compiler", encryptMiddleware, compilerRoutes);
+app.use("/ai", encryptMiddleware, aiRoutes);
 
 // Start server
 app.listen(PORT, () => {
