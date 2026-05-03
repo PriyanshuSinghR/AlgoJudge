@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { CODE_EXAMPLES, LANGUAGES } from "@/lib/constant";
-import { Editor } from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 
 import {
 	Select,
