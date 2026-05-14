@@ -16,17 +16,9 @@ const ensureImage = (image, dockerfile) => {
 	}
 };
 
-const runDocker = (image, codeFilePath, inputFilePath, commandBuilder) => {
-	const extension = codeFilePath.split(".").pop();
-
-	const fileMap = {
-		cpp: "code.cpp",
-		py: "code.py",
-		js: "code.js",
-		java: "code.java",
-	};
-
-	const containerFileName = fileMap[extension];
+const runDocker = (image,dockerfile, codeFilePath, inputFilePath, commandBuilder) => {
+	ensureImage(image, dockerfile);
+	
 	const codeFileName = path.basename(codeFilePath);
 	const inputFileName = path.basename(inputFilePath);
 
@@ -40,23 +32,40 @@ const runDocker = (image, codeFilePath, inputFilePath, commandBuilder) => {
 --cpus="0.5" \
 --network="none" \
 --pids-limit=50 \
+--read-only \
+--tmpfs /tmp:rw,size=64m \
 --volumes-from ${containerName} \
 ${image} \
 sh -c "${command} < /app/inputs/${inputFileName}"`;
 
 		console.log("Running command:\n", dockerCmd);
 
-		exec(dockerCmd, { timeout: 10000 }, (error, stdout, stderr) => {
-			if (error) return reject(stderr || error.message);
-			if (stderr) return reject(stderr);
-			resolve(stdout);
-		});
+		exec(
+			dockerCmd,
+			{
+				timeout: 5000,
+				maxBuffer: 1024 * 1024,
+			},
+			(error, stdout, stderr) => {
+				if (error?.killed) {
+					return reject("Time Limit Exceeded");
+				}
+
+				if (error) {
+					return reject(stderr || error.message);
+				}
+
+				resolve(stdout || stderr);
+			},
+		);
+		
 	});
 };
 
 const executeCpp = (codeFilePath, inputFilePath) => {
 	return runDocker(
 		"oj-cpp",
+		"docker/cpp.Dockerfile",
 		codeFilePath,
 		inputFilePath,
 		(filePath) => `g++ ${filePath} -o /tmp/a.out && /tmp/a.out`,
@@ -66,6 +75,7 @@ const executeCpp = (codeFilePath, inputFilePath) => {
 const executePython = (codeFilePath, inputFilePath) => {
 	return runDocker(
 		"oj-python",
+		"docker/python.Dockerfile",
 		codeFilePath,
 		inputFilePath,
 		(filePath) => `python ${filePath}`,
@@ -75,6 +85,7 @@ const executePython = (codeFilePath, inputFilePath) => {
 const executeJs = (codeFilePath, inputFilePath) => {
 	return runDocker(
 		"oj-node",
+		"docker/node.Dockerfile",
 		codeFilePath,
 		inputFilePath,
 		(filePath) => `node ${filePath}`,
@@ -84,6 +95,7 @@ const executeJs = (codeFilePath, inputFilePath) => {
 const executeJava = (codeFilePath, inputFilePath) => {
 	return runDocker(
 		"oj-java",
+		"docker/java.Dockerfile",
 		codeFilePath,
 		inputFilePath,
 		(filePath) => `java ${filePath}`,

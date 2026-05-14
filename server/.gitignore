@@ -2,3 +2,4 @@ node_modules
 codes
 inputs
 .env
+algojudge-key.pem
