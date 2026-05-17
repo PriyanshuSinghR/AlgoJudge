@@ -33,7 +33,7 @@ const runDocker = (image,dockerfile, codeFilePath, inputFilePath, commandBuilder
 --network="none" \
 --pids-limit=50 \
 --read-only \
---tmpfs /tmp:rw,size=64m \
+--tmpfs /tmp:rw,exec,size=64m \
 --volumes-from ${containerName} \
 ${image} \
 sh -c "${command} < /app/inputs/${inputFileName}"`;
