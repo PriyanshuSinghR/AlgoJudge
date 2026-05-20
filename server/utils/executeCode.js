@@ -9,7 +9,6 @@ const ensureImage = (image, dockerfile) => {
 	try {
 		execSync(`docker image inspect ${image}`, { stdio: "ignore" });
 	} catch {
-		console.log(`⚡ Image ${image} missing → rebuilding...`);
 		execSync(`docker build -t ${image} -f ${dockerfile} .`, {
 			stdio: "inherit",
 		});
@@ -38,7 +37,6 @@ const runDocker = (image,dockerfile, codeFilePath, inputFilePath, commandBuilder
 ${image} \
 sh -c "${command} < /app/inputs/${inputFileName}"`;
 
-		console.log("Running command:\n", dockerCmd);
 
 		exec(
 			dockerCmd,
