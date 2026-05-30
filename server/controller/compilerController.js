@@ -1,211 +1,187 @@
 import Problem from "../model/problem.js";
 import Submission from "../model/submission.js";
+
 import { executeByLanguage } from "../utils/executeCode.js";
-import { generateFile, cleanupFiles } from "../utils/utils.js";
 
-export const run = async (req, res) => {
-	const { language = "cpp", code, input = "" } = req.body;
+import { cleanupFiles, generateFile } from "../utils/utils.js";
 
-	if (!code) {
-		return res.status(400).json({
-			success: false,
-			message: "Code is required",
-		});
-	}
+import { successResponse } from "../utils/apiResponse.js";
+import AppError from "../utils/AppError.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
-	let files;
+export const run = asyncHandler(async (req, res) => {
+    const { language = "cpp", code, input = "" } = req.body;
 
-	try {
-		files = generateFile(language, code, input);
+    if (!code) {
+        throw new AppError("Code is required", 400);
+    }
 
-		const output = await executeByLanguage(
-			language,
-			files.codeFilePath,
-			files.inputFilePath,
-		);
+    let files;
 
-		return res.status(200).json({
-			success: true,
-			data: output.trim(),
-		});
-	} catch (error) {
-		return res.status(500).json({
-			success: false,
-			message: error.toString(),
-		});
-	} finally {
-		if (files) {
-			cleanupFiles(files.codeFilePath, files.inputFilePath);
-		}
-	}
-};
+    try {
+        files = generateFile(language, code, input);
 
-export const submit = async (req, res) => {
-	try {
-		const { problemId, language = "javascript", code } = req.body;
+        const output = await executeByLanguage(
+            language,
+            files.codeFilePath,
+            files.inputFilePath,
+        );
 
-		if (!problemId || !code) {
-			return res.status(400).json({
-				success: false,
-				message: "problemId and code are required",
-			});
-		}
+        return successResponse(
+            res,
+            output.trim(),
+            "Code executed successfully",
+        );
+    } finally {
+        if (files) {
+            cleanupFiles(files.codeFilePath, files.inputFilePath);
+        }
+    }
+});
 
-		const userId = req.user.id;
+export const submit = asyncHandler(async (req, res) => {
+    const { problemId, language = "javascript", code } = req.body;
 
-		const problem = await Problem.findById(problemId);
+    if (!problemId || !code) {
+        throw new AppError("problemId and code are required", 400);
+    }
 
-		if (!problem) {
-			return res.status(404).json({
-				success: false,
-				message: "Problem not found",
-			});
-		}
+    const userId = req.user.id;
 
-		const testCases = problem.testCases || [];
+    const problem = await Problem.findById(problemId);
 
-		if (testCases.length === 0) {
-			return res.status(400).json({
-				success: false,
-				message: "No test cases found for this problem",
-			});
-		}
+    if (!problem) {
+        throw new AppError("Problem not found", 404);
+    }
 
-		let submissionStatus = "Accepted";
-		let failedTestCase = null;
-		let runtimeMessage = null;
-		let wrongAnswerDetails = null;
+    const testCases = problem.testCases || [];
 
-		for (let i = 0; i < testCases.length; i++) {
-			const testCase = testCases[i];
+    if (testCases.length === 0) {
+        throw new AppError("No test cases found for this problem", 400);
+    }
 
-			let files;
+    let submissionStatus = "Accepted";
+    let failedTestCase = null;
+    let runtimeMessage = null;
+    let wrongAnswerDetails = null;
 
-			try {
-				files = generateFile(language, code, testCase.input);
+    for (let i = 0; i < testCases.length; i++) {
+        const testCase = testCases[i];
 
-				const output = await executeByLanguage(
-					language,
-					files.codeFilePath,
-					files.inputFilePath,
-				);
+        let files;
 
-				const actualOutput = output.trim();
-				const expectedOutput = String(testCase.output).trim();
+        try {
+            files = generateFile(language, code, testCase.input);
 
-				if (actualOutput !== expectedOutput) {
-					submissionStatus = "Wrong Answer";
-					failedTestCase = i + 1;
+            const output = await executeByLanguage(
+                language,
+                files.codeFilePath,
+                files.inputFilePath,
+            );
 
-					wrongAnswerDetails = {
-						input: testCase.input,
-						expectedOutput,
-						actualOutput,
-					};
+            const actualOutput = output.trim();
 
-					break;
-				}
-			} catch (runtimeError) {
-				submissionStatus = "Runtime Error";
-				failedTestCase = i + 1;
-				runtimeMessage = runtimeError.toString();
-				break;
-			} finally {
-				if (files) {
-					cleanupFiles(files.codeFilePath, files.inputFilePath);
-				}
-			}
-		}
+            const expectedOutput = String(testCase.output).trim();
 
-		// Save submission
-		const submission = await Submission.create({
-			user: userId,
-			problem: problemId,
-			language,
-			code,
-			status: submissionStatus,
-			failedTestCase,
-			runtime: null,
-			memory: null,
-		});
+            if (actualOutput !== expectedOutput) {
+                submissionStatus = "Wrong Answer";
 
-		// Keep only latest 5 submissions per user per problem
-		const oldSubmissions = await Submission.find({
-			user: userId,
-			problem: problemId,
-		})
-			.sort({ createdAt: -1 })
-			.skip(5);
+                failedTestCase = i + 1;
 
-		if (oldSubmissions.length > 0) {
-			const oldSubmissionIds = oldSubmissions.map((item) => item._id);
+                wrongAnswerDetails = {
+                    input: testCase.input,
+                    expectedOutput,
+                    actualOutput,
+                };
 
-			await Submission.deleteMany({
-				_id: { $in: oldSubmissionIds },
-			});
-		}
+                break;
+            }
+        } catch (runtimeError) {
+            submissionStatus = "Runtime Error";
 
-		if (submissionStatus === "Wrong Answer") {
-			return res.status(200).json({
-				success: true,
-				status: "Wrong Answer",
-				failedTestCase,
-				...wrongAnswerDetails,
-				submissionId: submission._id,
-			});
-		}
+            failedTestCase = i + 1;
 
-		if (submissionStatus === "Runtime Error") {
-			return res.status(200).json({
-				success: true,
-				status: "Runtime Error",
-				failedTestCase,
-				message: runtimeMessage,
-				submissionId: submission._id,
-			});
-		}
+            runtimeMessage = runtimeError.toString();
 
-		return res.status(200).json({
-			success: true,
-			status: "Accepted",
-			message: "All test cases passed successfully",
-			totalTestCases: testCases.length,
-			submissionId: submission._id,
-		});
-	} catch (error) {
-		return res.status(500).json({
-			success: false,
-			message: error.toString(),
-		});
-	}
-};
+            break;
+        } finally {
+            if (files) {
+                cleanupFiles(files.codeFilePath, files.inputFilePath);
+            }
+        }
+    }
 
-export const getSubmissionHistory = async (req, res) => {
-	try {
-		const { problemId } = req.params;
-		const userId = req.user.id;
+    const submission = await Submission.create({
+        user: userId,
+        problem: problemId,
+        language,
+        code,
+        status: submissionStatus,
+        failedTestCase,
+        runtime: null,
+        memory: null,
+    });
 
-		if (!problemId) {
-			return res.status(400).json({
-				success: false,
-				message: "Problem id is required",
-			});
-		}
+    if (submissionStatus === "Wrong Answer") {
+        return successResponse(
+            res,
+            {
+                status: "Wrong Answer",
+                failedTestCase,
+                ...wrongAnswerDetails,
+                submissionId: submission._id,
+            },
+            "Wrong answer",
+        );
+    }
 
-		const submissions = await Submission.find({
-			user: userId,
-			problem: problemId,
-		}).sort({ createdAt: -1 });
+    if (submissionStatus === "Runtime Error") {
+        return successResponse(
+            res,
+            {
+                status: "Runtime Error",
+                failedTestCase,
+                message: runtimeMessage,
+                submissionId: submission._id,
+            },
+            "Runtime error",
+        );
+    }
 
-		return res.status(200).json({
-			success: true,
-			count: submissions.length,
-			data: submissions,
-		});
-	} catch (error) {
-		return res.status(500).json({
-			success: false,
-			message: error.toString(),
-		});
-	}
-};
+    return successResponse(
+        res,
+        {
+            status: "Accepted",
+            totalTestCases: testCases.length,
+            submissionId: submission._id,
+        },
+        "All test cases passed successfully",
+    );
+});
+
+export const getSubmissionHistory = asyncHandler(async (req, res) => {
+    const { problemId } = req.params;
+
+    const userId = req.user.id;
+
+    if (!problemId) {
+        throw new AppError("Problem id is required", 400);
+    }
+
+    const submissions = await Submission.find({
+        user: userId,
+        problem: problemId,
+    }).sort({
+        createdAt: -1,
+    });
+
+    return successResponse(
+        res,
+        submissions,
+        "Submission history fetched successfully",
+        200,
+        {
+            count: submissions.length,
+        },
+    );
+});

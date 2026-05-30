@@ -1,209 +1,146 @@
 import Problem from "../model/problem.js";
 
-export const getProblems = async (req, res) => {
-	try {
-		const problems = await Problem.find().select(
-			"title difficulty tags slug createdBy -_id",
-		);
+import {
+    serializeProblemDetail,
+    serializeProblemList,
+} from "../serializers/problemSerializer.js";
 
-		res.json({
-			success: true,
-			data: problems,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error fetching problems",
-		});
-	}
-};
+import AppError from "../utils/AppError.js";
+import { successResponse } from "../utils/apiResponse.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
-export const getProblemBySlug = async (req, res) => {
-	try {
-		const problem = await Problem.findOne({
-			slug: req.params.slug,
-		}).select("-testCases");
+export const getProblems = asyncHandler(async (req, res) => {
+    const problems = await Problem.find();
 
-		if (!problem) {
-			return res.status(404).json({
-				success: false,
-				message: "Problem not found",
-			});
-		}
+    return successResponse(
+        res,
+        problems.map(serializeProblemList),
+        "Problems fetched successfully",
+    );
+});
 
-		res.json({
-			success: true,
-			data: problem,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error fetching problem",
-		});
-	}
-};
+export const getProblemBySlug = asyncHandler(async (req, res) => {
+    const problem = await Problem.findOne({
+        slug: req.params.slug,
+    });
 
-export const getProblemById = async (req, res) => {
-	try {
-		const problem = await Problem.findById(req.params.id).select("-testCases");
+    if (!problem) {
+        throw new AppError("Problem not found", 404);
+    }
 
-		if (!problem) {
-			return res.status(404).json({
-				success: false,
-				message: "Problem not found",
-			});
-		}
+    return successResponse(
+        res,
+        serializeProblemDetail(problem),
+        "Problem fetched successfully",
+    );
+});
 
-		res.json({
-			success: true,
-			data: problem,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error fetching problem",
-		});
-	}
-};
+export const getProblemById = asyncHandler(async (req, res) => {
+    const problem = await Problem.findById(req.params.id);
 
-export const createProblem = async (req, res) => {
-	try {
-		const problem = await Problem.create({
-			...req.body,
-			createdBy: req.user._id,
-		});
+    if (!problem) {
+        throw new AppError("Problem not found", 404);
+    }
 
-		res.status(201).json({
-			success: true,
-			data: problem,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error creating problem",
-		});
-	}
-};
+    return successResponse(
+        res,
+        serializeProblemDetail(problem),
+        "Problem fetched successfully",
+    );
+});
 
-export const updateProblem = async (req, res) => {
-	try {
-		const problem = await Problem.findById(req.params.id);
+export const createProblem = asyncHandler(async (req, res) => {
+    const problem = await Problem.create({
+        ...req.body,
+        createdBy: req.user._id,
+    });
 
-		if (!problem) {
-			return res.status(404).json({
-				success: false,
-				message: "Problem not found",
-			});
-		}
+    return successResponse(
+        res,
+        serializeProblemDetail(problem),
+        "Problem created successfully",
+        201,
+    );
+});
 
-		// 🔥 OWNER CHECK
-		if (problem.createdBy.toString() !== req.user._id.toString()) {
-			return res.status(403).json({
-				success: false,
-				message: "Forbidden: You are not the owner",
-			});
-		}
+export const updateProblem = asyncHandler(async (req, res) => {
+    const problem = await Problem.findById(req.params.id);
 
-		Object.assign(problem, req.body);
-		await problem.save();
+    if (!problem) {
+        throw new AppError("Problem not found", 404);
+    }
 
-		res.json({
-			success: true,
-			data: problem,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error updating problem",
-		});
-	}
-};
+    Object.assign(problem, req.body);
 
-export const deleteProblem = async (req, res) => {
-	try {
-		const problem = await Problem.findById(req.params.id);
+    await problem.save();
 
-		if (!problem) {
-			return res.status(404).json({
-				success: false,
-				message: "Problem not found",
-			});
-		}
+    return successResponse(
+        res,
+        serializeProblemDetail(problem),
+        "Problem updated successfully",
+    );
+});
 
-		// 🔥 OWNER CHECK
-		if (problem.createdBy.toString() !== req.user._id.toString()) {
-			return res.status(403).json({
-				success: false,
-				message: "Forbidden: You are not the owner",
-			});
-		}
+export const deleteProblem = asyncHandler(async (req, res) => {
+    const problem = await Problem.findById(req.params.id);
 
-		await problem.deleteOne();
+    if (!problem) {
+        throw new AppError("Problem not found", 404);
+    }
 
-		res.json({
-			success: true,
-			message: "Problem deleted",
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error deleting problem",
-		});
-	}
-};
+    await problem.deleteOne();
 
-export const bulkCreateProblems = async (req, res) => {
-	try {
-		const problems = req.body.problems;
+    return successResponse(res, null, "Problem deleted successfully");
+});
 
-		if (!Array.isArray(problems) || problems.length === 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Problems array is required",
-			});
-		}
+export const bulkCreateProblems = asyncHandler(async (req, res) => {
+    const problems = req.body.problems;
 
-		const slugify = (text) =>
-			text
-				.toLowerCase()
-				.trim()
-				.replace(/ /g, "-")
-				.replace(/[^\w-]+/g, "");
+    if (!Array.isArray(problems) || problems.length === 0) {
+        throw new AppError("Problems array is required", 400);
+    }
 
-		const formattedProblems = problems.map((p) => {
-			if (!p.title || !p.description) {
-				throw new Error("Title and description required");
-			}
+    const slugify = (text) =>
+        text
+            .toLowerCase()
+            .trim()
+            .replace(/ /g, "-")
+            .replace(/[^\w-]+/g, "");
 
-			if (!p.examples || p.examples.length < 2) {
-				throw new Error(`${p.title} must have at least 2 examples`);
-			}
+    const formattedProblems = problems.map((p) => {
+        if (!p.title || !p.description) {
+            throw new AppError("Title and description are required", 400);
+        }
 
-			if (!p.testCases || p.testCases.length < 5) {
-				throw new Error(`${p.title} must have at least 5 test cases`);
-			}
+        if (!p.examples || p.examples.length < 2) {
+            throw new AppError(`${p.title} must have at least 2 examples`, 400);
+        }
 
-			return {
-				...p,
-				slug: slugify(p.title),
-				createdBy: req.user._id,
-			};
-		});
+        if (!p.testCases || p.testCases.length < 5) {
+            throw new AppError(
+                `${p.title} must have at least 5 test cases`,
+                400,
+            );
+        }
 
-		const createdProblems = await Problem.insertMany(formattedProblems, {
-			ordered: false,
-		});
+        return {
+            ...p,
+            slug: slugify(p.title),
+            createdBy: req.user._id,
+        };
+    });
 
-		res.status(201).json({
-			success: true,
-			count: createdProblems.length,
-			data: createdProblems,
-		});
-	} catch (error) {
-		console.error(error);
-		res.status(500).json({
-			success: false,
-			message: error.message || "Bulk insert failed",
-		});
-	}
-};
+    const createdProblems = await Problem.insertMany(formattedProblems, {
+        ordered: false,
+    });
+
+    return successResponse(
+        res,
+        createdProblems.map(serializeProblemDetail),
+        "Problems created successfully",
+        201,
+        {
+            count: createdProblems.length,
+        },
+    );
+});

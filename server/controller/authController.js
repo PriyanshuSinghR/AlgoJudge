@@ -1,227 +1,184 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
 import AuthUser from "../model/authUser.js";
+
+import { successResponse } from "../utils/apiResponse.js";
+import AppError from "../utils/AppError.js";
+import asyncHandler from "../utils/asyncHandler.js";
+
+const serializeUser = (user) => ({
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+});
 
 /**
  * Signup
  */
-const signup = async (req, res) => {
-	try {
-		const { name, email, password } = req.body;
+export const signup = asyncHandler(async (req, res) => {
+    const { name, email, password } = req.body;
 
-		if (!(name && email && password)) {
-			return res.status(400).json({
-				success: false,
-				message: "Please provide name, email, and password",
-			});
-		}
+    if (!(name && email && password)) {
+        throw new AppError("Please provide name, email, and password", 400);
+    }
 
-		const existingUser = await AuthUser.findOne({
-			email: email.toLowerCase(),
-		});
+    const existingUser = await AuthUser.findOne({
+        email: email.toLowerCase(),
+    });
 
-		if (existingUser) {
-			return res.status(409).json({
-				success: false,
-				message: "User already exists",
-			});
-		}
+    if (existingUser) {
+        throw new AppError("User already exists", 409);
+    }
 
-		const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-		const user = await AuthUser.create({
-			name: name.trim(),
-			email: email.toLowerCase().trim(),
-			password: hashedPassword,
-		});
+    const user = await AuthUser.create({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+    });
 
-		const token = jwt.sign(
-			{ id: user._id, email: user.email },
-			process.env.JWT_SECRET,
-			{ expiresIn: "24h" },
-		);
+    const token = jwt.sign(
+        {
+            id: user._id,
+            email: user.email,
+            role: user.role,
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "24h",
+        },
+    );
 
-		res.status(201).json({
-			success: true,
-			message: "User registered successfully!",
-			user: {
-				_id: user._id,
-				name: user.name,
-				email: user.email,
-			},
-			token,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Internal server error",
-		});
-	}
-};
+    return successResponse(
+        res,
+        {
+            user: serializeUser(user),
+            token,
+        },
+        "User registered successfully",
+        201,
+    );
+});
 
 /**
  * Signin
  */
-const signin = async (req, res) => {
-	try {
-		const { email, password } = req.body;
+export const signin = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
-		if (!(email && password)) {
-			return res.status(400).json({
-				success: false,
-				message: "Email & password required",
-			});
-		}
+    if (!(email && password)) {
+        throw new AppError("Email & password required", 400);
+    }
 
-		const user = await AuthUser.findOne({
-			email: email.toLowerCase(),
-		});
+    const user = await AuthUser.findOne({
+        email: email.toLowerCase(),
+    });
 
-		if (!user) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid credentials",
-			});
-		}
+    if (!user) {
+        throw new AppError("Invalid credentials", 401);
+    }
 
-		const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password);
 
-		if (!isValid) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid credentials",
-			});
-		}
+    if (!isValid) {
+        throw new AppError("Invalid credentials", 401);
+    }
 
-		const token = jwt.sign(
-			{ id: user._id, email: user.email },
-			process.env.JWT_SECRET,
-			{ expiresIn: "24h" },
-		);
+    const token = jwt.sign(
+        {
+            id: user._id,
+            email: user.email,
+            role: user.role,
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "24h",
+        },
+    );
 
-		res.status(200).json({
-			success: true,
-			message: "Login successful!",
-			user: {
-				_id: user._id,
-				name: user.name,
-				email: user.email,
-			},
-			token,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Internal server error",
-		});
-	}
-};
+    return successResponse(
+        res,
+        {
+            user: serializeUser(user),
+            token,
+        },
+        "Login successful",
+    );
+});
 
 /**
  * Signout
  */
-const signout = async (req, res) => {
-	return res.status(200).json({
-		success: true,
-		message: "Logged out successfully",
-	});
-};
+export const signout = asyncHandler(async (req, res) => {
+    return successResponse(res, null, "Logged out successfully");
+});
 
 /**
  * Get current user
  */
-const getCurrentUser = async (req, res) => {
-	res.status(200).json({
-		success: true,
-		user: req.user,
-	});
-};
+export const getCurrentUser = asyncHandler(async (req, res) => {
+    return successResponse(
+        res,
+        serializeUser(req.user),
+        "Current user fetched successfully",
+    );
+});
 
 /**
  * Update profile
  */
-const updateCurrentUser = async (req, res) => {
-	try {
-		const { name, email } = req.body;
+export const updateCurrentUser = asyncHandler(async (req, res) => {
+    const { name, email } = req.body;
 
-		if (!name || !email) {
-			return res.status(400).json({
-				success: false,
-				message: "Name & email required",
-			});
-		}
+    if (!name || !email) {
+        throw new AppError("Name & email required", 400);
+    }
 
-		const existingUser = await AuthUser.findOne({
-			email: email.toLowerCase(),
-			_id: { $ne: req.user._id },
-		});
+    const existingUser = await AuthUser.findOne({
+        email: email.toLowerCase(),
+        _id: { $ne: req.user._id },
+    });
 
-		if (existingUser) {
-			return res.status(409).json({
-				success: false,
-				message: "Email already exists",
-			});
-		}
+    if (existingUser) {
+        throw new AppError("Email already exists", 409);
+    }
 
-		const updatedUser = await AuthUser.findByIdAndUpdate(
-			req.user._id,
-			{
-				name: name.trim(),
-				email: email.toLowerCase().trim(),
-			},
-			{ new: true },
-		).select("-password");
+    const updatedUser = await AuthUser.findByIdAndUpdate(
+        req.user._id,
+        {
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+        },
+        {
+            new: true,
+        },
+    );
 
-		res.status(200).json({
-			success: true,
-			message: "Profile updated",
-			user: updatedUser,
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error updating profile",
-		});
-	}
-};
+    return successResponse(
+        res,
+        serializeUser(updatedUser),
+        "Profile updated successfully",
+    );
+});
 
 /**
  * Change password
  */
-const changePassword = async (req, res) => {
-	try {
-		const { newPassword } = req.body;
+export const changePassword = asyncHandler(async (req, res) => {
+    const { newPassword } = req.body;
 
-		if (!newPassword || newPassword.length < 6) {
-			return res.status(400).json({
-				success: false,
-				message: "Password must be at least 6 characters",
-			});
-		}
+    if (!newPassword || newPassword.length < 6) {
+        throw new AppError("Password must be at least 6 characters", 400);
+    }
 
-		const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-		await AuthUser.findByIdAndUpdate(req.user._id, {
-			password: hashedPassword,
-		});
+    await AuthUser.findByIdAndUpdate(req.user._id, {
+        password: hashedPassword,
+    });
 
-		res.status(200).json({
-			success: true,
-			message: "Password updated successfully",
-		});
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			message: "Error updating password",
-		});
-	}
-};
-
-export {
-	signup,
-	signin,
-	signout,
-	getCurrentUser,
-	updateCurrentUser,
-	changePassword,
-};
+    return successResponse(res, null, "Password updated successfully");
+});

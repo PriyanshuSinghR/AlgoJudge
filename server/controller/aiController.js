@@ -1,73 +1,58 @@
-import problem from "../model/problem.js";
+import Problem from "../model/problem.js";
+
 import { explainCodeAI, generateHintAI } from "../utils/aiService.js";
 
-export const explainCode = async (req, res) => {
-	try {
-		const { code, language } = req.body;
+import { successResponse } from "../utils/apiResponse.js";
+import AppError from "../utils/AppError.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
-		if (!code?.trim()) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Code is required" });
-		}
+export const explainCode = asyncHandler(async (req, res) => {
+    const { code, language } = req.body;
 
-		if (code.trim().length < 10) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Code is too short to explain" });
-		}
+    if (!code?.trim()) {
+        throw new AppError("Code is required", 400);
+    }
 
-		const explanation = await explainCodeAI({
-			code: code.trim(),
-			language: language || "code",
-		});
-		return res.status(200).json({ success: true, data: explanation });
-	} catch (error) {
-		console.error("[explainCode]", error);
-		return res.status(500).json({
-			success: false,
-			message: "Failed to generate explanation. Please try again.",
-		});
-	}
-};
+    if (code.trim().length < 10) {
+        throw new AppError("Code is too short to explain", 400);
+    }
 
-export const getHint = async (req, res) => {
-	try {
-		const { problemId, userCode, level } = req.body;
+    const explanation = await explainCodeAI({
+        code: code.trim(),
+        language: language || "code",
+    });
 
-		if (!problemId) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Problem ID is required" });
-		}
+    return successResponse(
+        res,
+        explanation,
+        "Explanation generated successfully",
+    );
+});
 
-		const hintLevel = parseInt(level, 10);
-		if (isNaN(hintLevel) || hintLevel < 1 || hintLevel > 3) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Hint level must be 1, 2, or 3" });
-		}
+export const getHint = asyncHandler(async (req, res) => {
+    const { problemId, userCode, level } = req.body;
 
-		const problemDoc = await problem.findById(problemId);
+    if (!problemId) {
+        throw new AppError("Problem ID is required", 400);
+    }
 
-		if (!problemDoc) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Problem not found" });
-		}
+    const hintLevel = parseInt(level, 10);
 
-		const hint = await generateHintAI({
-			problem: problemDoc.description,
-			userCode: userCode?.trim() || "",
-			level: hintLevel,
-		});
+    if (isNaN(hintLevel) || hintLevel < 1 || hintLevel > 3) {
+        throw new AppError("Hint level must be 1, 2, or 3", 400);
+    }
 
-		return res.status(200).json({ success: true, data: hint });
-	} catch (error) {
-		console.error("[getHint]", error);
-		return res.status(500).json({
-			success: false,
-			message: "Failed to generate hint. Please try again.",
-		});
-	}
-};
+    const problemDoc = await Problem.findById(problemId);
+
+    if (!problemDoc) {
+        throw new AppError("Problem not found", 404);
+    }
+
+    const hint = await generateHintAI({
+        problem: problemDoc.description,
+        userCode: userCode?.trim() || "",
+        level: hintLevel,
+    });
+
+    return successResponse(res, hint, "Hint generated successfully");
+});
